@@ -75,7 +75,7 @@ function PropertySearchForm({ query, onSubmit }) {
 }
 
 export default function Properties() {
-  const { properties, isLoading, error } = useProperties();
+  const { properties } = useProperties();
   const [searchParams, setSearchParams] = useSearchParams();
   const filters = useMemo(() => parseListingSearchParams(searchParams), [searchParams]);
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -123,13 +123,6 @@ export default function Properties() {
 
   const activeCount = getActiveFilterCount(filters);
   const availableCount = getAvailableProperties(properties).length;
-
-  if (isLoading) {
-    return <main className="section"><Container><p role="status">Loading properties…</p></Container></main>;
-  }
-  if (error) {
-    return <main className="section"><Container><p role="alert">Properties could not be loaded. Please try again shortly.</p></Container></main>;
-  }
 
   const chips = [];
   if (filters.q) chips.push({ key: 'q', label: `Keyword: ${filters.q}` });

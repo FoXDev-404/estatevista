@@ -24,15 +24,8 @@ import { getPropertyMapEmbedUrl } from '../services/propertyMap';
 
 export default function PropertyDetails() {
   const { slug, id } = useParams();
-  const { getBySlug, getById, isLoading, error } = useProperties();
+  const { getBySlug, getById } = useProperties();
   const property = id ? getById(id) : getBySlug(slug);
-
-  if (isLoading) {
-    return <main className="section"><Container><p role="status">Loading property details…</p></Container></main>;
-  }
-  if (error) {
-    return <main className="section"><Container><p role="alert">Property details could not be loaded. Please try again shortly.</p></Container></main>;
-  }
 
   if (!property) {
     return (

@@ -11,7 +11,6 @@ import NotFound from '../pages/NotFound';
 import AdminProperties from '../pages/admin/AdminProperties';
 import AdminPropertyCreate from '../pages/admin/AdminPropertyCreate';
 import AdminPropertyEdit from '../pages/admin/AdminPropertyEdit';
-import AdminLogin from '../pages/admin/AdminLogin';
 
 export default function AppRoutes() {
   return (
@@ -28,7 +27,6 @@ export default function AppRoutes() {
       </Route>
 
       <Route path="/admin" element={<AdminLayout />}>
-        <Route path="login" element={<AdminLogin />} />
         <Route index element={<Navigate to="properties" replace />} />
         <Route path="properties" element={<AdminProperties />} />
         <Route path="properties/new" element={<AdminPropertyCreate />} />

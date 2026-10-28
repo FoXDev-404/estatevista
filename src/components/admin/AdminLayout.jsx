@@ -1,13 +1,10 @@
 import { useEffect } from 'react';
-import { Link, NavLink, Outlet, Navigate, useLocation } from 'react-router-dom';
+import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
 import { ExternalLink, LayoutDashboard, LockKeyhole } from 'lucide-react';
 import Logo from '../common/Logo';
-import useAuth from '../../hooks/useAuth';
 
 export default function AdminLayout() {
   const { pathname } = useLocation();
-  const location = useLocation();
-  const { isAdmin, isLoading, isSupabaseConfigured, signOut } = useAuth();
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -18,16 +15,6 @@ export default function AdminLayout() {
     }
     return undefined;
   }, [pathname]);
-
-  if (isSupabaseConfigured && pathname === '/admin/login') {
-    return <Outlet />;
-  }
-  if (isSupabaseConfigured && isLoading) {
-    return <main className="admin-main admin-loading" aria-live="polite">Checking administrator session…</main>;
-  }
-  if (isSupabaseConfigured && !isAdmin) {
-    return <Navigate to="/admin/login" replace state={{ from: location }} />;
-  }
 
   return (
     <div className="admin-shell">
@@ -52,11 +39,6 @@ export default function AdminLayout() {
               <ExternalLink size={17} aria-hidden="true" />
               View website
             </Link>
-            {isSupabaseConfigured ? (
-              <button type="button" className="admin-topbar__signout" onClick={signOut}>
-                Sign out
-              </button>
-            ) : null}
           </nav>
         </div>
       </header>
@@ -65,9 +47,7 @@ export default function AdminLayout() {
         <div className="container admin-local-banner__inner">
           <LockKeyhole size={16} aria-hidden="true" />
           <p>
-            {isSupabaseConfigured
-              ? 'Shared property data is managed through Supabase. Only authorized administrators can edit records.'
-              : 'Supabase is not configured. Local browser storage is active for development only.'}
+            This dashboard stores records in the browser with localStorage for quick testing and editing.
           </p>
         </div>
       </div>

@@ -19,18 +19,11 @@ import {
 import homeContent from '../data/home';
 
 export default function Home() {
-  const { properties, isLoading, error } = useProperties();
+  const { properties } = useProperties();
 
   const featured = useMemo(() => getFeaturedProperties(properties, 3), [properties]);
   const trending = useMemo(() => getTrendingProperties(properties, 3), [properties]);
   const latest = useMemo(() => getLatestProperties(properties, 3), [properties]);
-
-  if (isLoading) {
-    return <main className="section"><Container><p role="status">Loading the property collection…</p></Container></main>;
-  }
-  if (error) {
-    return <main className="section"><Container><p role="alert">The property collection could not be loaded. Please try again shortly.</p></Container></main>;
-  }
 
   return (
     <>
