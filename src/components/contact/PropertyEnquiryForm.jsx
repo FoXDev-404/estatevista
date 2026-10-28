@@ -69,9 +69,10 @@ export default function PropertyEnquiryForm({ property }) {
         <div className="form-success" role="status">
           <CheckCircle2 size={20} aria-hidden="true" />
           <div>
-            <p className="form-success__title">Enquiry noted</p>
+            <p className="form-success__title">Enquiry prepared</p>
             <p>
-              Your details have been captured for follow-up by the EstateVista advisory team.
+              This assignment form has validated your details locally. It has not been sent to a
+              live inbox or stored on a server.
             </p>
           </div>
         </div>

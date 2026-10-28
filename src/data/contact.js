@@ -18,9 +18,9 @@ export const contactDetails = {
     { label: 'Sunday', value: 'By appointment' },
   ],
   socials: [
-    { label: 'Instagram', icon: 'Camera', url: 'https://www.instagram.com/' },
-    { label: 'LinkedIn', icon: 'BriefcaseBusiness', url: 'https://www.linkedin.com/' },
-    { label: 'Pinterest', icon: 'Pin', url: 'https://www.pinterest.com/' },
+    { label: 'Instagram (demo link)', icon: 'Camera', url: 'https://www.instagram.com/' },
+    { label: 'LinkedIn (demo link)', icon: 'BriefcaseBusiness', url: 'https://www.linkedin.com/' },
+    { label: 'Pinterest (demo link)', icon: 'Pin', url: 'https://www.pinterest.com/' },
   ],
   map: {
     embedUrl:

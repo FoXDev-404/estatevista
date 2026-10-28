@@ -81,9 +81,10 @@ export default function ContactForm() {
         <div className="form-success" role="status">
           <CheckCircle2 size={20} aria-hidden="true" />
           <div>
-            <p className="form-success__title">Enquiry received</p>
+            <p className="form-success__title">Message prepared</p>
             <p>
-              Your details were captured in this local form and are ready for follow-up by the EstateVista team.
+              This assignment form has validated your details locally. It has not been sent to a
+              live inbox or stored on a server.
             </p>
           </div>
         </div>

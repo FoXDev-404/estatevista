@@ -63,7 +63,7 @@ export default function Footer() {
             </span>
           </div>
           {visibleSocials.length > 0 ? (
-            <div className="site-footer__socials" aria-label="Social media">
+            <div className="site-footer__socials" aria-label="Social media demo links">
               {visibleSocials.map((social) => {
                 const Icon = socialIcons[social.icon] || Globe;
                 return (

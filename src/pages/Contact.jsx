@@ -120,7 +120,7 @@ export default function Contact() {
 
                 {visibleSocials.length > 0 ? (
                   <div className="contact-socials">
-                    <span>Follow EstateVista</span>
+                    <span>Social profiles (demo links)</span>
                     <div>
                       {visibleSocials.map((social) => {
                         const Icon = socialIcons[social.icon] || Globe;
