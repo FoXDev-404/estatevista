@@ -1,8 +1,9 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter, useLocation } from 'react-router-dom';
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { beforeEach, describe, expect, it } from 'vitest';
 import Properties from '../pages/Properties';
+import PropertyDetails from '../pages/PropertyDetails';
 import PropertyProvider from '../context/PropertyProvider';
 import seedProperties from '../data/properties';
 import { filterProperties } from '../services/propertySelectors';
@@ -91,6 +92,22 @@ describe('Properties page', () => {
       expect(listingCount()).toHaveTextContent(`of ${availableCount} properties`);
     });
     expect(screen.getByTestId('location')).toHaveTextContent('');
+  });
+
+  it('renders an embedded map for a property location', () => {
+    render(
+      <MemoryRouter initialEntries={['/properties/marine-line-apartment-bandra-west']}>
+        <PropertyProvider>
+          <Routes>
+            <Route path="/properties/:slug" element={<PropertyDetails />} />
+          </Routes>
+        </PropertyProvider>
+      </MemoryRouter>,
+    );
+
+    const mapFrame = screen.getByTitle('Marine Line Apartment location map');
+    expect(mapFrame).toHaveAttribute('src', expect.stringContaining('openstreetmap.org/export/embed.html'));
+    expect(mapFrame).toHaveAttribute('src', expect.stringContaining('marker=19.076,72.8777'));
   });
 
   it('changes sorting from the toolbar', async () => {
