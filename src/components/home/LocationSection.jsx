@@ -8,6 +8,7 @@ import locations from '../../data/locations';
 import useProperties from '../../hooks/useProperties';
 import { getAvailableProperties } from '../../services/propertySelectors';
 import { buildListingSearchParams } from '../../services/searchParams';
+import homeContent from '../../data/home';
 
 export default function LocationSection() {
   const { properties } = useProperties();
@@ -23,12 +24,10 @@ export default function LocationSection() {
     <section className="location-section section section--white">
       <Container>
         <SectionHeading
-          eyebrow="Places with a point of view"
-          title="Find your corner of India."
-          description="From the Arabian Sea to the Aravalli foothills, each place has its own rhythm. Start with where you want to be."
+          {...homeContent.locations}
           action={
             <Link className="text-link" to="/properties">
-              Explore all locations
+              {homeContent.locations.ctaLabel}
               <ArrowUpRight size={16} aria-hidden="true" />
             </Link>
           }

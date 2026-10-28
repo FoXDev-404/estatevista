@@ -9,6 +9,7 @@ import Container from '../common/Container';
 import SectionHeading from '../common/SectionHeading';
 import SmartImage from '../common/SmartImage';
 import aboutContent from '../../data/about';
+import homeContent from '../../data/home';
 
 const icons = {
   BookOpen,
@@ -32,21 +33,17 @@ export default function WhyChooseSection() {
               height="1500"
             />
             <div className="why-section__caption">
-              <p className="why-section__caption-kicker">The EstateVista approach</p>
-              <p className="why-section__caption-text">
-                Curated, not crowded. Every property earns its place in the collection.
-              </p>
+              <p className="why-section__caption-kicker">{homeContent.whyChoose.captionKicker}</p>
+              <p className="why-section__caption-text">{homeContent.whyChoose.captionText}</p>
               <Link className="text-link text-link--light" to="/about">
-                Our story
+                {homeContent.whyChoose.storyLabel}
               </Link>
             </div>
           </div>
 
           <div className="why-section__content">
             <SectionHeading
-              eyebrow="Why choose EstateVista"
-              title="A search shaped around you."
-              description="We believe the best property decisions begin with clarity — about the place, the process and what you actually want."
+              {...homeContent.whyChoose}
             />
 
             <ol className="why-list">

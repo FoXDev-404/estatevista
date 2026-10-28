@@ -19,14 +19,15 @@ export const contactDetails = {
     { label: 'Sunday', value: 'By appointment' },
   ],
   socials: [
-    { label: 'Instagram', icon: 'Camera', url: '' },
-    { label: 'LinkedIn', icon: 'BriefcaseBusiness', url: '' },
-    { label: 'Pinterest', icon: 'Pin', url: '' },
+    { label: 'Instagram', icon: 'Camera', url: 'https://www.instagram.com/' },
+    { label: 'LinkedIn', icon: 'BriefcaseBusiness', url: 'https://www.linkedin.com/' },
+    { label: 'Pinterest', icon: 'Pin', url: 'https://www.pinterest.com/' },
   ],
   map: {
-    embedUrl: '',
+    embedUrl:
+      'https://www.openstreetmap.org/export/embed.html?bbox=72.818%2C18.998%2C72.846%2C19.025&layer=mapnik&marker=19.014%2C72.832',
     title: 'EstateVista demonstration office location',
-    note: 'A map will appear here once a verified office location and embed URL are configured.',
+    note: 'Demonstration map centred on the sample Bandra West office location.',
   },
 };
 

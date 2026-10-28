@@ -19,6 +19,7 @@ export default function AppRoutes() {
         <Route index element={<Home />} />
         <Route path="properties" element={<Properties />} />
         <Route path="properties/:slug" element={<PropertyDetails />} />
+        <Route path="properties/id/:id" element={<PropertyDetails />} />
         <Route path="about" element={<About />} />
         <Route path="services" element={<Services />} />
         <Route path="contact" element={<Contact />} />

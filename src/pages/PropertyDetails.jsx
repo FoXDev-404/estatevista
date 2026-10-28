@@ -22,9 +22,9 @@ import contactDetails from '../data/contact';
 import site from '../data/site';
 
 export default function PropertyDetails() {
-  const { slug } = useParams();
-  const { getBySlug } = useProperties();
-  const property = getBySlug(slug);
+  const { slug, id } = useParams();
+  const { getBySlug, getById } = useProperties();
+  const property = id ? getById(id) : getBySlug(slug);
 
   if (!property) {
     return (

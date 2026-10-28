@@ -3,6 +3,7 @@ import { ArrowRight } from 'lucide-react';
 import Container from '../common/Container';
 import SmartImage from '../common/SmartImage';
 import site from '../../data/site';
+import homeContent from '../../data/home';
 
 export default function CTASection() {
   return (
@@ -19,21 +20,16 @@ export default function CTASection() {
       </div>
       <span className="cta-section__overlay" aria-hidden="true" />
       <Container className="cta-section__inner">
-        <p className="eyebrow eyebrow--light">Begin a conversation</p>
-        <h2 id="home-cta-title" className="cta-section__title">
-          Your next chapter deserves a considered beginning.
-        </h2>
-        <p className="cta-section__description">
-          Tell us what you are looking for, or simply what home means to you. We will help you
-          take the next step with clarity.
-        </p>
+        <p className="eyebrow eyebrow--light">{homeContent.cta.eyebrow}</p>
+        <h2 id="home-cta-title" className="cta-section__title">{homeContent.cta.title}</h2>
+        <p className="cta-section__description">{homeContent.cta.description}</p>
         <div className="cta-section__actions">
           <Link className="button button--gold button--lg" to={site.contactCta.href}>
             {site.contactCta.label}
             <ArrowRight size={17} aria-hidden="true" />
           </Link>
           <Link className="button button--outline-light button--lg" to="/properties">
-            Browse properties
+            {homeContent.cta.browseLabel}
           </Link>
         </div>
       </Container>

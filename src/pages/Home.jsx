@@ -16,6 +16,7 @@ import {
   getLatestProperties,
   getTrendingProperties,
 } from '../services/propertySelectors';
+import homeContent from '../data/home';
 
 export default function Home() {
   const { properties } = useProperties();
@@ -36,14 +37,10 @@ export default function Home() {
       </section>
 
       <PropertySection
-        eyebrow="The signature collection"
-        title="A considered place to begin."
-        description="A small selection of featured homes from the current EstateVista collection, chosen for their sense of space, setting and design."
+        {...homeContent.featured}
         properties={featured}
         ctaTo="/properties?featured=true"
         ctaLabel="View featured collection"
-        emptyTitle="No featured properties right now"
-        emptyDescription="Explore the full collection, or mark a property as featured in the property studio."
         tone="white"
       />
 
@@ -51,14 +48,10 @@ export default function Home() {
       <WhyChooseSection />
 
       <PropertySection
-        eyebrow="Currently captivating"
-        title="Properties with a certain pull."
-        description="Homes that have caught the attention of our editors and visitors — distinctive places with a clear point of view."
+        {...homeContent.trending}
         properties={trending}
         ctaTo="/properties"
         ctaLabel="Explore all properties"
-        emptyTitle="Trending properties will appear here"
-        emptyDescription="Properties marked as trending will appear in this section when available."
         tone="ivory"
       />
 
@@ -66,14 +59,10 @@ export default function Home() {
       <ServicesSection limit={3} />
 
       <PropertySection
-        eyebrow="New to EstateVista"
-        title="The latest arrivals."
-        description="Recently added properties, ordered by the date they joined the collection."
+        {...homeContent.latest}
         properties={latest}
         ctaTo="/properties?sort=newest"
         ctaLabel="See what is new"
-        emptyTitle="No new properties yet"
-        emptyDescription="New records will appear here as soon as they are added."
         tone="white"
       />
 

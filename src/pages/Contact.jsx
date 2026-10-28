@@ -24,8 +24,7 @@ const socialIcons = {
 export default function Contact() {
   const hasMap = Boolean(
     contactDetails.map?.embedUrl &&
-      /^https?:\/\//i.test(contactDetails.map.embedUrl) &&
-      contactDetails.isDemo === false,
+      /^https?:\/\//i.test(contactDetails.map.embedUrl),
   );
   const visibleSocials = contactDetails.socials.filter((social) => social.url);
 

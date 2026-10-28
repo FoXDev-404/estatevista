@@ -7,6 +7,7 @@ import EmptyState from '../common/EmptyState';
 import propertyCategories from '../../data/categories';
 import useProperties from '../../hooks/useProperties';
 import { getAvailableProperties } from '../../services/propertySelectors';
+import homeContent from '../../data/home';
 
 export default function CategorySection() {
   const { properties } = useProperties();
@@ -23,12 +24,10 @@ export default function CategorySection() {
     <section className="category-section section section--ivory">
       <Container>
         <SectionHeading
-          eyebrow="Browse by category"
-          title="A place for every way of living."
-          description="From city apartments to coastal retreats, explore the collection by the kind of space you have in mind."
+          {...homeContent.categories}
           action={
             <Link className="text-link" to="/properties">
-              All properties
+              {homeContent.categories.ctaLabel}
               <ArrowUpRight size={16} aria-hidden="true" />
             </Link>
           }

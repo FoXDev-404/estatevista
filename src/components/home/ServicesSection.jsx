@@ -4,6 +4,7 @@ import Container from '../common/Container';
 import SectionHeading from '../common/SectionHeading';
 import ServiceCard from '../common/ServiceCard';
 import services from '../../data/services';
+import homeContent from '../../data/home';
 
 export default function ServicesSection({ limit = 3 }) {
   const visibleServices = Number.isInteger(limit) ? services.slice(0, limit) : services;
@@ -12,12 +13,10 @@ export default function ServicesSection({ limit = 3 }) {
     <section className="services-overview section section--ivory">
       <Container>
         <SectionHeading
-          eyebrow="Our services"
-          title="A considered level of service."
-          description="Whether you are buying, selling, renting or simply seeking a second perspective, our role is to make the process clearer."
+          {...homeContent.services}
           action={
             <Link className="text-link" to="/services">
-              Explore all services
+              {homeContent.services.ctaLabel}
               <ArrowRight size={16} aria-hidden="true" />
             </Link>
           }
