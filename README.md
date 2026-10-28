@@ -1,99 +1,53 @@
 # EstateVista — Assignment Submission
 
-EstateVista is a **frontend-only real-estate website created for a Junior Frontend Developer assignment**. It is not a real estate company, live marketplace, production business, or verified property service.
+EstateVista is a **frontend-only real-estate website created for a Junior Frontend Developer
+assignment**. It is not a real estate company, live marketplace, production business, or
+verified property service.
 
-The project demonstrates the requested pages, reusable React components, data-driven content, property search, property details, maps, forms, and a browser-based admin CRUD experience. It is intended for evaluation and portfolio presentation, not for processing real property transactions.
+The project demonstrates the requested public pages, reusable React components, data-driven
+content, property search, property details, maps, forms, and a browser-based admin CRUD flow.
+The assignment brief was provided by [Digitalsdaddy.com](https://digitalsdaddy.com).
 
-The assignment brief was provided by [Digitalsdaddy.com](https://digitalsdaddy.com). EstateVista is an independent implementation created for that assignment.
+## Features
 
----
+### Public website
 
-## Contents
+- **Home:** five-slide hero, search, featured/trending/latest properties, categories, locations,
+  Why Choose Us, services, testimonials, CTA, and footer.
+- **Properties:** dynamic cards, keyword/location search, type/purpose/price/featured filters,
+  sorting, URL-synced pagination, and grid/list views.
+- **Property details:** slug or ID lookup, gallery/lightbox, price, location, map, specifications,
+  amenities, facilities, enquiry form, advisor contact, and related properties.
+- **About:** company introduction, mission, vision, statistics, values, team, and Why Choose Us.
+- **Services:** five data-driven services with descriptions, imagery, and process guidance.
+- **Contact:** validated contact form, contact details, business hours, social links, and
+  OpenStreetMap office map.
+- **404:** branded not-found page for unknown routes and properties.
 
-- [Overview](#overview)
-- [Feature highlights](#feature-highlights)
-- [Tech stack](#tech-stack)
-- [Getting started](#getting-started)
-- [Available scripts](#available-scripts)
-- [Routes](#routes)
-- [Project architecture](#project-architecture)
-- [Data model](#data-model)
-- [Editing content](#editing-content)
-- [Property persistence and reset](#property-persistence-and-reset)
-- [Admin studio](#admin-studio)
-- [Listing URL parameters](#listing-url-parameters)
-- [Testing and quality checks](#testing-and-quality-checks)
-- [Accessibility](#accessibility)
-- [Responsive design](#responsive-design)
-- [Deployment](#deployment)
-- [Assignment requirement map](#assignment-requirement-map)
-- [Limitations](#limitations)
-- [Credits and attribution](#credits-and-attribution)
+### Admin studio
 
----
-
-## Overview
-
-EstateVista is a frontend assignment project. All repeatable content lives in `src/data/`, and reusable React components render that content without page-specific copies. Adding a property, changing a hero slide, updating a service, or editing contact details flows through the relevant pages automatically.
-
-The property collection contains 16 fictional sample records: 13 available listings plus sold, rented, and unavailable records that remain manageable in the admin studio but are excluded from public collection selectors.
-
-The application includes:
-
-- Six public pages plus a branded 404 page.
-- A data-driven five-slide hero with autoplay, pause/play, arrows, pagination dots and reduced-motion support.
-- Search, multi-field filters, sorting, pagination and a grid/list view on the properties page.
-- Full property details with gallery, lightbox, specifications, amenities, facilities, agent card, enquiry form and related properties.
-- A local admin studio with create, read, update, delete, validation, duplicate protection and reset-to-seed data flow.
-- Immediate localStorage persistence and cross-tab synchronisation.
-- Local fonts and 47 locally hosted images, so the site does not depend on third-party image or font CDNs at runtime. Location maps use OpenStreetMap embeds configured in the data layer.
-
-## Feature highlights
-
-### Assignment website
-
-| Page | Highlights |
-| --- | --- |
-| **Home** | Five-slide hero, hero property search, featured/trending/latest collections, categories, popular locations, brand story, services, testimonials and call to action. |
-| **Properties** | Available-only collection, keyword/location search, type/purpose/price/featured filters, newest/price sorting, pagination, active-filter chips, grid/list layouts and URL-synchronised state. |
-| **Property details** | Image gallery and lightbox, price, address, type/purpose/status, full specification set, description, amenities, facilities, advisor contact card, enquiry form and related properties. |
-| **About** | Company story, mission and vision, statistics, values, team profiles and why-choose section. |
-| **Services** | Five data-driven service offerings with descriptions, imagery and process guidance. |
-| **Contact** | Validated contact form, phone/email/address, business hours, social links and an OpenStreetMap office map. |
-| **404** | Branded not-found experience with links back to the collection and the homepage. |
-
-### Assignment admin studio
-
-- Dashboard totals for all, available, sold, rented and unavailable records.
-- Search by reference, title, slug, city, area or type.
-- Status filtering and a responsive table/card presentation.
-- Create and edit forms with shared validation and duplicate ID/slug protection.
-- Accessible delete confirmation and full reset confirmation.
-- Success and error toasts.
-- Changes persist immediately in the current browser and appear on public pages without a rebuild.
+- Dashboard with totals and status filters.
+- Search by reference, title, slug, city, area, or type.
+- Create, edit, delete, validation, duplicate protection, and reset-to-seed data.
+- Location map preview in the property editor.
+- Browser `localStorage` persistence and cross-tab updates.
 
 ## Tech stack
 
-| Tool | Version | Purpose |
-| --- | --- | --- |
-| React | 19.3.1 | Component model and UI |
-| React DOM | 19.3.1 | Browser rendering |
-| React Router DOM | 7.18.5 | Public and admin routing |
-| Vite | 8.3.5 | Development server and production build |
-| JavaScript / JSX | ES2022+ | Application code |
-| Lucide React | 1.63.0 | Interface icons |
-| Vitest | 5.0.5 | Test runner |
-| Testing Library / jest-dom | 16.3.3 / 6.9.1 | Component and DOM assertions |
-| ESLint | 10.13.0 | Static analysis |
-| Plain CSS | — | Design tokens and responsive styles |
-
-The project was developed and verified with Node.js **24.18.0** and npm **11.16.0**. Vite 8 requires a modern Node.js release; use Node.js 20.19+ or 22.12+ at minimum.
+- React 19
+- React Router 7
+- Vite 8
+- JavaScript / JSX
+- Plain CSS
+- Vitest and Testing Library
+- ESLint
+- Lucide React
 
 ## Getting started
 
-### Prerequisites
+### Requirements
 
-- Node.js 20.19+ (Node.js 22 LTS or newer recommended)
+- Node.js 20.19+ (Node.js 22+ recommended)
 - npm 10+
 
 ### Install and run
@@ -103,327 +57,95 @@ npm install
 npm run dev
 ```
 
-Open the URL printed by Vite, typically <http://localhost:5173/>.
+Open the local URL shown by Vite, normally <http://localhost:5173/>.
 
-### Production preview
+### Available scripts
 
 ```bash
-npm run build
-npm run preview
+npm run dev       # Start development server
+npm run build     # Create production build
+npm run preview   # Preview production build
+npm test          # Run Vitest tests
+npm run lint      # Run ESLint
 ```
-
-The production preview runs at <http://localhost:4173/> by default.
-
-### First run
-
-No environment variables, API keys or external services are required. On first visit, the property repository seeds the canonical collection from `src/data/properties.js` into browser localStorage.
-
-## Available scripts
-
-| Command | Description |
-| --- | --- |
-| `npm run dev` | Start the Vite development server with hot reload. |
-| `npm run build` | Create a production build in `dist/`. |
-| `npm run preview` | Serve the production build locally. |
-| `npm test` | Run all Vitest suites once. |
-| `npm run test:watch` | Run Vitest in watch mode. |
-| `npm run lint` | Run ESLint across the project. |
-| `npm run lint:fix` | Apply safe ESLint fixes. |
 
 ## Routes
 
-### Public routes
+### Public
 
 | Route | Page |
 | --- | --- |
-| `/` | Homepage |
+| `/` | Home |
 | `/properties` | Property listing |
 | `/properties/:slug` | Property details |
-| `/about` | About EstateVista |
+| `/properties/id/:id` | Property details by ID |
+| `/about` | About |
 | `/services` | Services |
 | `/contact` | Contact |
 | `*` | Branded 404 |
 
-### Admin routes
+### Admin
 
 | Route | Page |
 | --- | --- |
-| `/admin` | Redirects to `/admin/properties` |
+| `/admin` | Redirects to the dashboard |
 | `/admin/properties` | Property dashboard |
 | `/admin/properties/new` | Create property |
 | `/admin/properties/:id/edit` | Edit property |
 
-Unknown property slugs and unknown non-admin routes render the branded 404 page. The admin studio is an unauthenticated browser-only assignment tool.
+## Data architecture
 
-## Project architecture
-
-```text
-estatevista/
-├── public/
-│   ├── _redirects                 # Netlify SPA fallback
-│   ├── favicon.svg
-│   ├── fonts/                     # Local Cormorant Garamond and Manrope WOFF2 files
-│   └── images/                    # 47 locally hosted property images
-├── src/
-│   ├── app/
-│   │   ├── App.jsx                # Toast + property providers
-│   │   └── router.jsx             # Public/admin route definitions
-│   ├── components/
-│   │   ├── admin/                 # Dashboard form, table, delete confirmation, layout
-│   │   ├── common/                # Buttons, fields, modal, images, headers, cards
-│   │   ├── contact/               # Contact and property enquiry forms
-│   │   ├── home/                  # Hero, search and all homepage sections
-│   │   ├── layout/                # Header, footer, mobile navigation, public layout
-│   │   └── properties/            # Cards, grid, filters, sort, view toggle, gallery, pagination
-│   ├── context/                   # Property and toast context providers
-│   ├── data/                      # All editable content
-│   ├── hooks/                     # useProperties, useReducedMotion, useToast
-│   ├── pages/                     # Six public pages, 404 and admin pages
-│   ├── services/                  # Repository, selectors, validation, formatters, URL state
-│   ├── styles/
-│   │   ├── tokens.css             # Fonts, colours, type, spacing, motion tokens
-│   │   ├── global.css             # Reset, base elements, accessibility utilities
-│   │   ├── components.css         # Shared UI components
-│   │   ├── pages.css              # Page and feature styles
-│   │   ├── admin.css              # Admin studio styles
-│   │   └── responsive.css         # Refinements down to 320px and reduced motion
-│   ├── test/                      # Vitest suites, fixtures and setup
-│   └── main.jsx                   # React root and style imports
-├── index.html
-├── vite.config.js
-├── eslint.config.js
-├── vercel.json
-└── package.json
-```
-
-### Architectural boundaries
-
-- **`src/data/`** contains content and option lists only. UI components do not hard-code listing, service, team or testimonial content.
-- **`src/services/`** contains framework-independent logic: storage, validation, selectors, formatting and URL parsing.
-- **`src/context/` and `src/hooks/`** connect services to React state and expose a small, reusable API.
-- **`src/components/`** contains reusable presentation and interaction components.
-- **`src/pages/`** composes components and services into routes.
-
-## Data model
-
-Every property uses the same canonical shape. Optional presentation flags are included for all records so the schema remains predictable.
-
-```js
-{
-  id: 'PROP-001',
-  slug: 'the-arbour-residence-worli',
-  title: 'The Arbour Residence',
-  type: 'apartment',              // apartment | house | villa | plot | commercial
-  purpose: 'sale',                // sale | rent
-  price: 68500000,
-  currency: 'INR',
-  location: {
-    city: 'Mumbai',
-    area: 'Worli',
-    address: '14 Marine Crescent, Worli, Mumbai 400018',
-  },
-  specifications: {
-    bedrooms: 4,
-    bathrooms: 4,
-    area: 2850,
-    areaUnit: 'sqft',             // sqft | sqm | sqyd | acres
-  },
-  images: [
-    '/images/property-1.jpg',
-    '/images/property-2.jpg',
-    '/images/property-3.jpg',
-  ],
-  description: 'A sea-facing residence…',
-  amenities: ['Sea view', 'Private lift lobby'],
-  facilities: ['Power backup', 'Gymnasium'],
-  status: 'available',            // available | sold | rented | unavailable
-  featured: true,
-  trending: true,
-  createdAt: '2026-10-22',
-}
-```
-
-### Validation rules
-
-The shared validator in `src/services/validation.js` enforces:
-
-- IDs matching `^[A-Z0-9-]+$` and unique across the collection.
-- Lowercase kebab-case slugs, unique across the collection, up to 100 characters.
-- Titles of 3–120 characters.
-- Supported property types, purposes, statuses and area units.
-- Non-negative numeric prices and positive numeric areas.
-- Non-negative whole-number bedroom and bathroom counts.
-- A three-letter currency code.
-- City, area and a full address.
-- Image paths that are local paths, `http(s)` URLs or image data URLs.
-- Descriptions of 20–2,500 characters.
-- Boolean `featured` and `trending` flags.
-- A valid creation date.
-
-Admin form validation additionally requires a positive price greater than zero.
-
-### Selection rules
-
-- **All properties:** records with `status === 'available'`.
-- **Featured:** available records with `featured === true`.
-- **Trending:** available records with `trending === true`.
-- **Latest:** available records sorted by `createdAt`, newest first.
-- **Type collections:** available records filtered by `type`.
-- **Rentals:** available records filtered by `purpose === 'rent'`.
-
-The same property object is reused across every section; there are no duplicate per-section property copies.
-
-## Editing content
-
-Repeatable and collection-level content is centralised in `src/data/`:
+Repeatable content is centralized in `src/data/`:
 
 | File | Content |
 | --- | --- |
-| `site.js` | Brand name, tagline, default currency and global settings. |
-| `navigation.js` | Header and footer navigation. |
-| `hero-slides.js` | Five hero slides, media, copy, CTA, active state and duration. |
-| `properties.js` | The 16 canonical sample property records. |
-| `categories.js` | Property category cards. |
-| `locations.js` | Popular location cards. |
-| `services.js` | Five service offerings. |
-| `testimonials.js` | Customer testimonials. |
-| `team.js` | Team profiles. |
-| `about.js` | Story, mission, vision, statistics and values. |
-| `contact.js` | Contact details, office information, hours and social links. |
-| `propertyOptions.js` | Type, purpose, status, area-unit and sort option lists. |
+| `properties.js` | Initial property records |
+| `hero-slides.js` | Five hero slides |
+| `home.js` | Homepage section copy |
+| `services.js` | Service offerings |
+| `categories.js` | Property categories |
+| `locations.js` | Popular locations |
+| `about.js` | Story, mission, vision, values |
+| `team.js` | Team profiles |
+| `testimonials.js` | Testimonials |
+| `contact.js` | Contact information and map |
+| `site.js` | Site-wide settings |
 
-### Add or edit a property in the seed data
+All public property sections use the same canonical records from `src/data/properties.js`.
+Property selection, filtering, sorting, validation, formatting, and storage logic lives in
+`src/services/`.
 
-1. Open `src/data/properties.js`.
-2. Add a new object using the canonical shape above. Use a unique `id`, unique `slug`, valid `type`, `purpose`, `status` and `createdAt`.
-3. Reference local images from `public/images/` using a path such as `/images/property-12.jpg`, or use absolute `http(s)` URLs.
-4. Reload the app. If the browser already has saved data, the repository preserves it. Reset the storage key or use **Reset property data** to reload the edited seed collection.
+### Property persistence
 
-> The seed file is the initial data source, not a live synchronisation target. Once localStorage contains a valid collection, edits to `properties.js` do not overwrite the user's saved records. This is intentional CRUD behaviour.
-
-### Add a hero slide
-
-Add an object to `src/data/hero-slides.js`:
-
-```js
-{
-  id: 'SLIDE-06',
-  mediaType: 'image',             // image | video
-  mediaSrc: '/images/hero-5.jpg',
-  poster: '/images/hero-5.jpg',   // used as video poster or image fallback
-  alt: 'Descriptive alternative text',
-  eyebrow: 'Location · City',
-  heading: 'A considered headline.',
-  subtitle: 'Supporting copy for the slide.',
-  ctaLabel: 'Explore',
-  ctaTo: '/properties',
-  isActive: true,
-  duration: 7000,
-}
-```
-
-Set `isActive: false` to keep a slide in the file without rendering it. Missing media is handled by the shared `SmartImage` fallback and the hero's image fallback.
-
-### Add a service
-
-Add an object to `src/data/services.js`. The homepage renders the first three services, while `/services` renders all five from the same collection.
-
-## Property persistence and reset
-
-### Storage key
+The assignment uses browser storage:
 
 ```text
 estatevista.properties.v1
 ```
 
-The repository in `src/services/propertyRepository.js`:
+On first load, the repository seeds the collection from `src/data/properties.js`. After that,
+valid browser data is preserved. Create, update, delete, and reset operations write immediately
+to `localStorage`; other open tabs refresh through the browser `storage` event.
 
-- Seeds the collection when the key is missing.
-- Validates the complete saved collection on read.
-- Replaces malformed JSON, invalid records, duplicate IDs or duplicate slugs with the known-good seed collection.
-- Preserves a valid empty array, allowing the admin studio to show its empty state.
-- Falls back to an in-memory store when localStorage is blocked; the app remains usable for the current session.
-- Writes immediately after every create, update and delete.
-- Dispatches React updates and listens for the browser `storage` event, so other open tabs refresh when the collection changes.
-- Throws typed errors for validation, missing records and storage failures; these are surfaced as form errors or toasts.
-
-### Reset options
-
-**In the interface**
+To restore the original seed collection:
 
 1. Open `/admin/properties`.
-2. Choose **Reset property data**.
-3. Confirm **Reset all property data**.
+2. Select **Reset property data**.
+3. Confirm the reset.
 
-**In browser developer tools**
+Or run in browser developer tools:
 
 ```js
 localStorage.removeItem('estatevista.properties.v1');
 location.reload();
 ```
 
-The next load re-seeds the collection from `src/data/properties.js`.
+## Testing
 
-**Clear all site data** through the browser's site-settings panel for the same effect.
+The test suite covers repository CRUD and validation, selectors, URL filters, property listing,
+maps, hero behavior, reduced motion, and admin form validation.
 
-## Admin studio
-
-Open <http://localhost:5173/admin/properties>.
-
-### Create
-
-1. Select **Add property**.
-2. Complete the required fields. The slug auto-generates from the title until you edit it manually.
-3. Choose a status. Only `available` records appear in public collection selectors.
-4. Submit. The next reference is shown before saving and is generated as `PROP-###`.
-
-### Read and search
-
-The dashboard lists every record, including sold, rented and unavailable properties. Use the search field, status cards or status dropdown to narrow the table. On narrow screens the table becomes a set of accessible record cards.
-
-### Update
-
-Choose **Edit** on any record. The same form component validates changes, preserves the original ID and creation date, and checks slug uniqueness against the rest of the collection.
-
-### Delete
-
-Choose **Delete**, review the property in the confirmation modal, then confirm. The record is removed from storage immediately and the public pages update.
-
-### Reset
-
-Use **Reset property data** to replace the entire browser collection with the original seed records.
-
-## Listing URL parameters
-
-The properties page synchronises supported filters, sorting and pagination with the URL, making filtered collections shareable and browser-navigation friendly.
-
-| Parameter | Values | Example |
-| --- | --- | --- |
-| `q` | Free-text keyword | `/properties?q=sea+view` |
-| `location` | City, area or address text | `/properties?location=Goa` |
-| `type` | `apartment`, `house`, `villa`, `plot`, `commercial` | `/properties?type=villa` |
-| `purpose` | `sale`, `rent` | `/properties?purpose=rent` |
-| `minPrice` | Non-negative number | `/properties?minPrice=5000000` |
-| `maxPrice` | Non-negative number | `/properties?maxPrice=9000000` |
-| `featured` | `true` | `/properties?featured=true` |
-| `sort` | `newest`, `price-asc`, `price-desc` | `/properties?sort=price-asc` |
-| `page` | Positive integer (6 records per page) | `/properties?page=2` |
-
-Unsupported or malformed values are ignored and replaced with safe defaults. Removing filters updates the URL with `replace`, so every chip change does not create a separate history entry. The grid/list presentation is a UI preference and is not encoded in the URL.
-
-## Testing and quality checks
-
-The test suite covers:
-
-- Repository seeding, CRUD, malformed storage recovery, duplicate validation and storage failures.
-- Filtering, search, sorting, pagination, related properties and statistics.
-- Schema validation, slug generation and form conversion/validation.
-- Public properties page rendering, URL-synced filters, search, sorting and grid/list switching.
-- Admin form validation, duplicate slugs and successful submission.
-- Hero accessibility, autoplay, pause/play and reduced-motion behaviour.
-- Search-parameter parsing, construction and active-filter counts.
-
-Run the full verification set:
+Current verification commands:
 
 ```bash
 npm test
@@ -431,105 +153,42 @@ npm run lint
 npm run build
 ```
 
-Browser QA was performed in Chromium at 320px, 390px, and desktop widths, covering the public and admin assignment routes, mobile navigation, gallery, filters, pagination, maps, and the local create → reload → update → delete CRUD flow.
+Browser QA covers the public pages, admin pages, mobile navigation, gallery, filters, pagination,
+maps, and the local create → reload → update → delete flow.
 
-## Accessibility
+## Deployment
 
-- Semantic page landmarks, headings and lists.
-- A skip link to the main content.
-- Visible focus styles and keyboard-operable controls.
-- Hero carousel with labelled region, `aria-roledescription`, slide announcements, labelled previous/next buttons, pagination dots and pause/play.
-- Modal and mobile navigation focus trapping, Escape dismissal, background scroll lock and focus restoration.
-- Form labels, descriptions, `aria-invalid`, inline error messages and focus movement to the first invalid field.
-- Live regions for listing counts and toast notifications.
-- Alternative text for meaningful imagery; decorative icons hidden from assistive technology.
-- Colour combinations designed for readable contrast, with improved overlays on image headers.
-- `prefers-reduced-motion` support that disables autoplay and reduces non-essential transitions.
-- Responsive layouts tested from 320px upward without horizontal page overflow.
+This is a Vite single-page application. Build it with:
 
-## Responsive design
-
-The CSS layers provide desktop, tablet and mobile refinements at 1280, 1100, 1024, 900, 768, 640, 480 and 380 pixels, plus hover and reduced-motion media queries. Key mobile adaptations include:
-
-- A compact header with an accessible slide-out navigation.
-- A single-column hero with stacked search controls.
-- Collapsible property filters.
-- Single-column property grids and stacked list-view cards.
-- Scrollable admin tables or record cards.
-- Reduced type sizes and spacing at 320px.
-
-## Assignment deployment
-
-The project is a single-page application and needs a host that rewrites unknown paths to `index.html`.
-
-### Netlify
-
-`public/_redirects` is included:
-
-```text
-/*    /index.html   200
+```bash
+npm run build
 ```
 
-Build settings:
-
-- Build command: `npm run build`
-- Publish directory: `dist`
-
-### Vercel
-
-`vercel.json` is included with a catch-all rewrite to `/index.html`. Import the repository, keep the Vite preset, and deploy.
-
-### Other static hosts
-
-Run `npm run build` and upload `dist/`. Configure an SPA fallback so routes such as `/properties/the-arbour-residence-worli` and `/admin/properties` resolve to `index.html`.
-
-### Important assignment limitation
-
-This deployment is for demonstrating the assignment website. The admin studio stores data in each visitor's browser. It is not multi-user, authenticated, or backed by a database. Do not use it as a production property-management system or as a source of verified property information.
-
-## Assignment requirement map
-
-| Requirement | Implementation |
-| --- | --- |
-| Data-driven architecture | `src/data/` modules consumed by reusable components and selectors. |
-| Six public pages | Home, Properties, Property Details, About, Services, Contact. |
-| Homepage hero slider with five slides | `src/data/hero-slides.js` + `HeroSlider.jsx`, with media type, copy, CTA, active state and duration. |
-| Slider controls and autoplay | Arrows, pagination dots, pause/play, 7-second autoplay and reduced-motion handling. |
-| Search by name/location and filters | Keyword/location search plus type, purpose, price and featured filters. |
-| Sorting | Newest, price low-to-high and price high-to-low. |
-| Grid/list layouts | Accessible toolbar toggle with responsive grid and editorial list cards. |
-| Pagination | Six records per page with URL-synced page state. |
-| Property details by ID or slug | `/properties/:slug`, with a clear 404 for unknown records. |
-| Gallery, specs, amenities, facilities | Full details page with lightbox and specification components. |
-| Contact/agent section | Advisor card, phone/email links and validated enquiry form. |
-| Related properties | Scored by type, city, area, purpose and price proximity. |
-| About page content | Story, mission, vision, statistics, values, team and why-choose content. |
-| Data-driven services | Five services rendered on `/services`; first three on the homepage. |
-| Contact page | Details, hours, social links, validated form and OpenStreetMap office map. |
-| CRUD | Create, read, update and delete through the admin studio. |
-| Persistence | Immediate localStorage writes and cross-tab updates. |
-| Initial data from a data file | First load seeds from `src/data/properties.js`. |
-| Responsive design | Tested from 320px through desktop. |
-| README documentation | This document. |
+Deploy the `dist/` directory to a static host and configure an SPA fallback to `index.html`.
+The repository includes `vercel.json` and `public/_redirects`.
 
 ## Assignment scope and limitations
 
-- **Fictional content.** Property records, prices, availability, addresses, team members, testimonials, and contact details are fictional assignment content. They are not verified listings or real business information.
-- **No production backend.** The application has no server, database, authentication, or role-based access control. The admin studio is open to anyone who visits `/admin`.
-- **Per-browser storage.** Records do not synchronise across browsers or devices. Clearing site data removes local changes.
-- **Form submissions are simulated.** Contact and property enquiry forms validate input and show success feedback, but they do not send email, create leads, or persist messages.
-- **Maps use OpenStreetMap embeds.** The contact office map is configured in `src/data/contact.js`; property detail and admin edit maps resolve from property coordinates or city fallbacks through `src/services/propertyMap.js`.
-- **Image and font assets are local project assets.** Photography is sourced from Unsplash for the project build; replace it with licensed production assets before commercial use.
-- **No payments, saved searches, user accounts, CRM integration, listing verification, or transaction processing.** These are outside the assignment scope.
-- **Seed edits require a reset for existing browsers.** Once a valid collection is stored, the data file is not re-applied automatically.
-- **Browser storage can be unavailable.** The repository falls back to memory, but changes then last only for the current session.
+- Property records, prices, availability, addresses, team members, testimonials, and contact
+  details are fictional assignment content.
+- There is no backend, database, authentication, role-based access control, or cross-device
+  synchronization.
+- The admin studio is open to anyone who visits `/admin` and stores data only in that browser.
+- Contact and property enquiry forms validate input and show success feedback, but do not send or
+  persist messages.
+- OpenStreetMap embeds are used for the contact and property location previews.
+- No payments, saved searches, user accounts, CRM, listing verification, or transaction processing
+  are included.
+- Replace fictional content, imagery, and contact details with verified production assets before
+  commercial use.
 
-## Credits and attribution
+## Credits
 
-- **Assignment brief:** [Digitalsdaddy.com](https://digitalsdaddy.com) — Junior Frontend Developer real estate website assignment. This attribution appears in project documentation only and is not used as website branding.
-- **Photography:** [Unsplash](https://unsplash.com) contributors, downloaded locally for the project build. Replace with appropriately licensed production imagery before commercial use.
-- **Fonts:** Cormorant Garamond and Manrope, served as local WOFF2 files.
-- **Icons:** [Lucide](https://lucide.dev).
-- **Framework and tooling:** React, React Router, Vite, Vitest, Testing Library and ESLint.
+- **Assignment brief:** [Digitalsdaddy.com](https://digitalsdaddy.com)
+- **Photography:** [Unsplash](https://unsplash.com) contributors
+- **Icons:** [Lucide](https://lucide.dev)
+- **Fonts:** Cormorant Garamond and Manrope
 
-EstateVista is an independent assignment project and frontend demonstration. It is not affiliated with, endorsed by, or sponsored by any property brand, agency, listing service, or real estate company.
+EstateVista is an independent assignment project and frontend demonstration. It is not affiliated
+with, endorsed by, or sponsored by any property brand, agency, listing service, or real estate
+company.
