@@ -46,7 +46,7 @@ The application includes:
 - Full property details with gallery, lightbox, specifications, amenities, facilities, agent card, enquiry form and related properties.
 - A local admin studio with create, read, update, delete, validation, duplicate protection and reset-to-seed data flow.
 - Immediate localStorage persistence and cross-tab synchronisation.
-- Local fonts and 47 locally hosted images, so the site does not depend on third-party image or font CDNs at runtime.
+- Local fonts and 47 locally hosted images, so the site does not depend on third-party image or font CDNs at runtime. Location maps use OpenStreetMap embeds configured in the data layer.
 
 ## Feature highlights
 
@@ -59,7 +59,7 @@ The application includes:
 | **Property details** | Image gallery and lightbox, price, address, type/purpose/status, full specification set, description, amenities, facilities, advisor contact card, enquiry form and related properties. |
 | **About** | Company story, mission and vision, statistics, values, team profiles and why-choose section. |
 | **Services** | Five data-driven service offerings with descriptions, imagery and process guidance. |
-| **Contact** | Validated contact form, phone/email/address, business hours, social links and a clearly labelled map placeholder. |
+| **Contact** | Validated contact form, phone/email/address, business hours, social links and an OpenStreetMap office map. |
 | **404** | Branded not-found experience with links back to the collection and the homepage. |
 
 ### Admin studio
@@ -506,7 +506,7 @@ The admin studio is a front-end property manager for local browser use. Its data
 | Related properties | Scored by type, city, area, purpose and price proximity. |
 | About page content | Story, mission, vision, statistics, values, team and why-choose content. |
 | Data-driven services | Five services rendered on `/services`; first three on the homepage. |
-| Contact page | Details, hours, social links, validated form and labelled map placeholder. |
+| Contact page | Details, hours, social links, validated form and OpenStreetMap office map. |
 | CRUD | Create, read, update and delete through the admin studio. |
 | Persistence | Immediate localStorage writes and cross-tab updates. |
 | Initial data from a data file | First load seeds from `src/data/properties.js`. |
@@ -519,7 +519,7 @@ The admin studio is a front-end property manager for local browser use. Its data
 - **No backend.** The application has no server, database, authentication or role-based access control. The admin studio is open to anyone who visits `/admin`.
 - **Per-browser storage.** Records do not synchronise across browsers or devices. Clearing site data removes local changes.
 - **Form submissions are simulated.** Contact and property enquiry forms validate input and show success feedback, but they do not send email or persist messages.
-- **Map is a placeholder.** No map provider or embed URL is configured, so the contact page labels the placeholder rather than presenting it as a live map.
+- **Maps use OpenStreetMap embeds.** The contact office map is configured in `src/data/contact.js`; property detail and admin edit maps resolve from property coordinates or city fallbacks through `src/services/propertyMap.js`.
 - **Image and font assets are local project assets.** Photography is sourced from Unsplash for the project build; replace it with licensed production assets before commercial use.
 - **No payments, saved searches, user accounts or CRM integration.** These are outside the assignment scope.
 - **Seed edits require a reset for existing browsers.** Once a valid collection is stored, the data file is not re-applied automatically.
