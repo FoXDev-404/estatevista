@@ -2,7 +2,7 @@
   "name": "estatevista",
   "private": true,
   "version": "1.0.0",
-  "description": "EstateVista — a premium, data-driven real estate marketplace demonstration.",
+  "description": "EstateVista — a premium, data-driven real estate marketplace.",
   "type": "module",
   "scripts": {
     "dev": "vite",

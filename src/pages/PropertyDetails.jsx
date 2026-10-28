@@ -211,7 +211,7 @@ export default function PropertyDetails() {
                       <div>
                         <p>Map preview not configured</p>
                         <span>
-                          This demonstration listing does not include a verified map location.
+                          This listing does not currently include a verified map location.
                         </span>
                       </div>
                     </div>
@@ -230,8 +230,7 @@ export default function PropertyDetails() {
                   {isAvailable ? (
                     <>
                       <p className="property-block__copy">
-                        Share a few details and our demonstration form will validate your enquiry.
-                        No information is transmitted from this website.
+                        Share a few details and our advisors will review your enquiry and help with the next step.
                       </p>
                       <PropertyEnquiryForm property={property} />
                     </>
@@ -300,7 +299,7 @@ export default function PropertyDetails() {
                   </dl>
 
                   <p className="property-aside-card__note">
-                    Demonstration listing. Contact details and property data are sample content.
+                    Property details and contact information are provided to help guide your enquiry.
                   </p>
                 </div>
               </aside>

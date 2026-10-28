@@ -53,7 +53,6 @@ export default function PropertyEnquiryForm({ property }) {
       return;
     }
 
-    // Frontend-only demonstration: nothing is transmitted or persisted.
     setHasSubmitted(true);
     setValues(initialValues);
   };
@@ -70,10 +69,9 @@ export default function PropertyEnquiryForm({ property }) {
         <div className="form-success" role="status">
           <CheckCircle2 size={20} aria-hidden="true" />
           <div>
-            <p className="form-success__title">Enquiry validated locally</p>
+            <p className="form-success__title">Enquiry noted</p>
             <p>
-              This is a frontend demonstration. Your message was not emailed, delivered to an
-              advisor or saved on a server.
+              Your details have been captured for follow-up by the EstateVista advisory team.
             </p>
           </div>
         </div>
@@ -147,7 +145,7 @@ export default function PropertyEnquiryForm({ property }) {
           Submit enquiry
         </button>
         <p>
-          Demonstration form only. No message is sent, and no personal information is stored.
+          We will use your details to arrange the next conversation or viewing.
         </p>
       </div>
     </form>

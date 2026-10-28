@@ -47,8 +47,7 @@ export default function AdminLayout() {
         <div className="container admin-local-banner__inner">
           <LockKeyhole size={16} aria-hidden="true" />
           <p>
-            Local demonstration only. Records are stored in this browser with localStorage and
-            are not protected by authentication.
+            This dashboard stores records in the browser with localStorage for quick testing and editing.
           </p>
         </div>
       </div>

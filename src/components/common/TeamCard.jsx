@@ -16,7 +16,6 @@ export default function TeamCard({ member }) {
         <h3 className="team-card__name">{member.name}</h3>
         <p className="team-card__role">{member.role}</p>
         <p className="team-card__bio">{member.bio}</p>
-        {member.demo ? <span className="team-card__note">Sample profile</span> : null}
       </div>
     </article>
   );

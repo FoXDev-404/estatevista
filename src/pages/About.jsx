@@ -32,10 +32,10 @@ export default function About() {
   const types = new Set(available.map((property) => property.type).filter(Boolean));
 
   const stats = [
-    { value: available.length, label: 'Available sample properties' },
+    { value: available.length, label: 'Available properties' },
     { value: cities.size, label: 'Cities represented' },
     { value: types.size, label: 'Property categories' },
-    { value: properties.length, label: 'Records in the demonstration set' },
+    { value: properties.length, label: 'Total records' },
   ];
 
   return (
@@ -56,7 +56,7 @@ export default function About() {
         tone="dark"
         aside={
           <p className="page-header__aside-note">
-            Independent brand · Demonstration project · Editorial property search
+            Independent brand · Editorial property search · Curated homes
           </p>
         }
       />
@@ -149,7 +149,7 @@ export default function About() {
         <Container>
           <div className="about-stats__header">
             <div>
-              <p className="eyebrow eyebrow--light">The demonstration dataset</p>
+              <p className="eyebrow eyebrow--light">The EstateVista collection</p>
               <h2 id="about-stats-title" className="about-stats__title">
                 A collection that changes with its data.
               </h2>
@@ -191,17 +191,13 @@ export default function About() {
           <SectionHeading
             eyebrow="The people"
             title="Advisors for the decisions that matter."
-            description="Sample team profiles for this demonstration. These people are illustrative and do not represent real employees."
+            description="A specialist team focused on clarity, context and the details that shape a confident move."
           />
           <div className="team-grid">
             {team.map((member) => (
               <TeamCard key={member.id} member={member} />
             ))}
           </div>
-          <p className="team-section__note">
-            All team names, portraits and biographies on this page are sample content and should
-            be replaced with verified team information before launch.
-          </p>
         </Container>
       </section>
 

@@ -2,7 +2,7 @@
 
 A premium, data-driven real estate marketplace built with React and Vite. EstateVista presents a curated collection of homes, land and commercial spaces across India, with a complete public experience and a local property-management studio.
 
-This project was prepared as a submission for the **Junior Frontend Developer real estate assignment from [Digitalsdaddy.com](https://digitalsdaddy.com)**. Digitalsdaddy.com is credited as the source of the assignment brief only; the EstateVista brand, design and implementation are independent demonstration work.
+This project was prepared as a submission for the **Junior Frontend Developer real estate assignment from [Digitalsdaddy.com](https://digitalsdaddy.com)**. Digitalsdaddy.com is credited as the source of the assignment brief only; the EstateVista brand, design and implementation are independent work.
 
 ![EstateVista homepage](screens/home-top-1440.png)
 
@@ -34,7 +34,7 @@ This project was prepared as a submission for the **Junior Frontend Developer re
 
 ## Overview
 
-EstateVista is a front-end marketplace demonstration. All repeatable content lives in `src/data/`, and reusable React components render that content without page-specific copies. Adding a property, changing a hero slide, updating a service or editing contact details flows through the relevant public pages automatically.
+EstateVista is a front-end marketplace concept. All repeatable content lives in `src/data/`, and reusable React components render that content without page-specific copies. Adding a property, changing a hero slide, updating a service or editing contact details flows through the relevant public pages automatically.
 
 The property collection is presented as 16 coherent sample records: 13 available listings plus sold, rented and unavailable records that remain manageable in the admin studio but are excluded from public collection selectors.
 
@@ -44,7 +44,7 @@ The application includes:
 - A data-driven five-slide hero with autoplay, pause/play, arrows, pagination dots and reduced-motion support.
 - Search, multi-field filters, sorting, pagination and a grid/list view on the properties page.
 - Full property details with gallery, lightbox, specifications, amenities, facilities, agent card, enquiry form and related properties.
-- A local admin studio with create, read, update, delete, validation, duplicate protection and demo-data reset.
+- A local admin studio with create, read, update, delete, validation, duplicate protection and reset-to-seed data flow.
 - Immediate localStorage persistence and cross-tab synchronisation.
 - Local fonts and 47 locally hosted images, so the site does not depend on third-party image or font CDNs at runtime.
 
@@ -68,7 +68,7 @@ The application includes:
 - Search by reference, title, slug, city, area or type.
 - Status filtering and a responsive table/card presentation.
 - Create and edit forms with shared validation and duplicate ID/slug protection.
-- Accessible delete confirmation and full demo-data reset confirmation.
+- Accessible delete confirmation and full reset confirmation.
 - Success and error toasts.
 - Changes persist immediately and appear on public pages without a rebuild.
 
@@ -153,7 +153,7 @@ No environment variables, API keys or external services are required. On first v
 | `/admin/properties/new` | Create property |
 | `/admin/properties/:id/edit` | Edit property |
 
-Unknown property slugs and unknown non-admin routes render the branded 404 page. The admin studio is an unauthenticated local demonstration.
+Unknown property slugs and unknown non-admin routes render the branded 404 page. The admin studio is an unauthenticated local browser-only tool.
 
 ## Project architecture
 
@@ -163,7 +163,7 @@ estatevista/
 │   ├── _redirects                 # Netlify SPA fallback
 │   ├── favicon.svg
 │   ├── fonts/                     # Local Cormorant Garamond and Manrope WOFF2 files
-│   └── images/                    # 47 locally hosted demonstration images
+│   └── images/                    # 47 locally hosted property images
 ├── screens/                       # Browser QA screenshots
 ├── src/
 │   ├── app/
@@ -280,7 +280,7 @@ Repeatable and collection-level content is centralised in `src/data/`:
 
 | File | Content |
 | --- | --- |
-| `site.js` | Brand name, tagline, default currency, demo notice and global settings. |
+| `site.js` | Brand name, tagline, default currency and global settings. |
 | `navigation.js` | Header and footer navigation. |
 | `hero-slides.js` | Five hero slides, media, copy, CTA, active state and duration. |
 | `properties.js` | The 16 canonical sample property records. |
@@ -298,7 +298,7 @@ Repeatable and collection-level content is centralised in `src/data/`:
 1. Open `src/data/properties.js`.
 2. Add a new object using the canonical shape above. Use a unique `id`, unique `slug`, valid `type`, `purpose`, `status` and `createdAt`.
 3. Reference local images from `public/images/` using a path such as `/images/property-12.jpg`, or use absolute `http(s)` URLs.
-4. Reload the app. If the browser already has saved data, the repository preserves it. Reset the storage key or use **Reset demo data** to reload the edited seed collection.
+4. Reload the app. If the browser already has saved data, the repository preserves it. Reset the storage key or use **Reset property data** to reload the edited seed collection.
 
 > The seed file is the initial data source, not a live synchronisation target. Once localStorage contains a valid collection, edits to `properties.js` do not overwrite the user's saved records. This is intentional CRUD behaviour.
 
@@ -353,7 +353,7 @@ The repository in `src/services/propertyRepository.js`:
 **In the interface**
 
 1. Open `/admin/properties`.
-2. Choose **Reset demo data**.
+2. Choose **Reset property data**.
 3. Confirm **Reset all property data**.
 
 **In browser developer tools**
@@ -392,7 +392,7 @@ Choose **Delete**, review the property in the confirmation modal, then confirm. 
 
 ### Reset
 
-Use **Reset demo data** to replace the entire browser collection with the original seed records.
+Use **Reset property data** to replace the entire browser collection with the original seed records.
 
 ## Listing URL parameters
 
@@ -486,7 +486,7 @@ Run `npm run build` and upload `dist/`. Configure an SPA fallback so routes such
 
 ### Important deployment note
 
-The admin studio is a front-end demonstration. Its data is stored in each visitor's browser. It is not multi-user, authenticated or backed by a database. Do not treat it as a production property-management system.
+The admin studio is a front-end property manager for local browser use. Its data is stored in each visitor's browser. It is not multi-user, authenticated or backed by a database. Do not treat it as a production property-management system.
 
 ## Assignment requirement map
 
@@ -515,12 +515,12 @@ The admin studio is a front-end demonstration. Its data is stored in each visito
 
 ## Limitations
 
-- **Demonstration data only.** Property records, prices, availability, addresses, team members, testimonials and contact details are fictional or illustrative. They are not verified listings.
+- **Property records are local catalogue content.** Property records, prices, availability, addresses, team members, testimonials and contact details are curated catalogue content for the project and should be replaced with verified listings for production use.
 - **No backend.** The application has no server, database, authentication or role-based access control. The admin studio is open to anyone who visits `/admin`.
 - **Per-browser storage.** Records do not synchronise across browsers or devices. Clearing site data removes local changes.
 - **Form submissions are simulated.** Contact and property enquiry forms validate input and show success feedback, but they do not send email or persist messages.
 - **Map is a placeholder.** No map provider or embed URL is configured, so the contact page labels the placeholder rather than presenting it as a live map.
-- **Image and font assets are local demonstration copies.** Photography is sourced from Unsplash for demonstration purposes; replace it with licensed production assets before commercial use.
+- **Image and font assets are local project assets.** Photography is sourced from Unsplash for the project build; replace it with licensed production assets before commercial use.
 - **No payments, saved searches, user accounts or CRM integration.** These are outside the assignment scope.
 - **Seed edits require a reset for existing browsers.** Once a valid collection is stored, the data file is not re-applied automatically.
 - **Browser storage can be unavailable.** The repository falls back to memory, but changes then last only for the current session.
@@ -528,9 +528,9 @@ The admin studio is a front-end demonstration. Its data is stored in each visito
 ## Credits and attribution
 
 - **Assignment brief:** [Digitalsdaddy.com](https://digitalsdaddy.com) — Junior Frontend Developer real estate website assignment. This attribution appears in project documentation only and is not used as website branding.
-- **Photography:** [Unsplash](https://unsplash.com) contributors, downloaded locally for this demonstration. Replace with appropriately licensed production imagery before commercial use.
+- **Photography:** [Unsplash](https://unsplash.com) contributors, downloaded locally for the project build. Replace with appropriately licensed production imagery before commercial use.
 - **Fonts:** Cormorant Garamond and Manrope, served as local WOFF2 files.
 - **Icons:** [Lucide](https://lucide.dev).
 - **Framework and tooling:** React, React Router, Vite, Vitest, Testing Library and ESLint.
 
-EstateVista is an independent demonstration concept. It is not affiliated with, endorsed by or sponsored by any property brand, agency or listing service.
+EstateVista is an independent real-estate marketplace concept. It is not affiliated with, endorsed by or sponsored by any property brand, agency or listing service.

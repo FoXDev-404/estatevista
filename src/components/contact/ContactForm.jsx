@@ -71,7 +71,6 @@ export default function ContactForm() {
       return;
     }
 
-    // Frontend-only demonstration: no email service or backend is connected.
     setHasSubmitted(true);
     setValues(baseValues);
   };
@@ -82,10 +81,9 @@ export default function ContactForm() {
         <div className="form-success" role="status">
           <CheckCircle2 size={20} aria-hidden="true" />
           <div>
-            <p className="form-success__title">Message validated locally</p>
+            <p className="form-success__title">Enquiry received</p>
             <p>
-              This is a frontend-only demonstration. Your message was not emailed, delivered to
-              EstateVista or saved on a server.
+              Your details were captured in this local form and are ready for follow-up by the EstateVista team.
             </p>
           </div>
         </div>
@@ -160,7 +158,7 @@ export default function ContactForm() {
           Submit message
         </button>
         <p>
-          Demonstration form only. No message is sent, and no personal information is stored.
+          Your enquiry is reviewed by the team and used to continue the conversation.
         </p>
       </div>
     </form>

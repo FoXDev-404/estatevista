@@ -76,12 +76,12 @@ export default function AdminProperties() {
     setIsResetting(true);
     try {
       resetProperties();
-      addToast('Demonstration property data was restored.', 'success');
+      addToast('Property data was restored.', 'success');
       setResetOpen(false);
       setSearchTerm('');
       setStatusFilter('');
     } catch (error) {
-      addToast(error?.message || 'Demonstration data could not be reset.', 'error');
+      addToast(error?.message || 'The property data could not be reset.', 'error');
     } finally {
       setIsResetting(false);
     }
@@ -96,7 +96,7 @@ export default function AdminProperties() {
     <>
       <PageMeta
         title="Property dashboard"
-        description="Local property management dashboard for the EstateVista demonstration."
+        description="Property management dashboard for the EstateVista collection."
         noIndex
       />
       <Container className="admin-page">
@@ -105,8 +105,7 @@ export default function AdminProperties() {
             <p className="eyebrow">Property studio</p>
             <h1 className="admin-page__title">Property dashboard</h1>
             <p className="admin-page__description">
-              Manage every record in the local demonstration collection, including sold, rented
-              and unavailable properties.
+              Manage every record in the collection, including sold, rented and unavailable properties.
             </p>
           </div>
           <div className="admin-page__actions">
@@ -116,7 +115,7 @@ export default function AdminProperties() {
               onClick={() => setResetOpen(true)}
             >
               <RotateCcw size={16} aria-hidden="true" />
-              Reset demo data
+              Reset data
             </button>
             <Link className="button button--primary button--md" to="/admin/properties/new">
               <Plus size={17} aria-hidden="true" />
@@ -199,7 +198,7 @@ export default function AdminProperties() {
             <EmptyState
               icon={Building2}
               title="No properties yet"
-              description="Add the first property record, or restore the original demonstration collection."
+              description="Add the first property record, or restore the original collection."
               action={
                 <div className="admin-empty-actions">
                   <Link className="button button--primary button--md" to="/admin/properties/new">
@@ -212,7 +211,7 @@ export default function AdminProperties() {
                     onClick={() => setResetOpen(true)}
                   >
                     <RotateCcw size={16} aria-hidden="true" />
-                    Restore demo data
+                    Restore data
                   </button>
                 </div>
               }
@@ -250,8 +249,8 @@ export default function AdminProperties() {
       <Modal
         open={resetOpen}
         onClose={isResetting ? () => {} : () => setResetOpen(false)}
-        title="Reset demonstration data?"
-        description="This replaces all properties in local browser storage with the original sample collection."
+        title="Reset property data?"
+        description="This replaces all properties in local browser storage with the original collection."
         footer={
           <>
             <button
@@ -281,7 +280,7 @@ export default function AdminProperties() {
         <div className="reset-confirmation">
           <p>
             Any properties you have created, edited or deleted in this browser will be replaced by
-            the original sample records. This cannot be undone.
+            the original records. This cannot be undone.
           </p>
           <p>Public pages will update immediately after the reset.</p>
         </div>

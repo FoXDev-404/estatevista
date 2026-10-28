@@ -50,7 +50,7 @@ export default function PropertyTable({ properties, onDelete }) {
     <div className="property-table">
       <div className="property-table__scroll">
         <table>
-          <caption className="sr-only">Property records in the local demonstration dashboard</caption>
+          <caption className="sr-only">Property records in the local dashboard</caption>
           <thead>
             <tr>
               <th scope="col">Reference</th>

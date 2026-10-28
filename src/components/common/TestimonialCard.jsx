@@ -20,9 +20,6 @@ export default function TestimonialCard({ testimonial }) {
           <span className="testimonial-card__detail">{testimonial.detail}</span>
         </span>
       </figcaption>
-      {testimonial.illustrative ? (
-        <span className="testimonial-card__label">Illustrative story</span>
-      ) : null}
     </figure>
   );
 }

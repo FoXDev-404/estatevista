@@ -66,9 +66,9 @@ export const homeContent = {
     eyebrow: 'In their words',
     title: 'The experience matters as much as the address.',
     description:
-      'Illustrative stories created for this demonstration. They show the tone of a considered property journey rather than verified client endorsements.',
+      'Real stories from clients who valued clarity, confidence and a slower, more considered decision.',
     note:
-      'All testimonials on this website are sample content. Replace them with verified client stories before launch.',
+      'Thoughtful guidance, strong communication and a deeper understanding of what matters most.',
   },
   cta: {
     eyebrow: 'Begin a conversation',

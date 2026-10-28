@@ -84,9 +84,9 @@ export default function Footer() {
 
         <div className="site-footer__bottom">
           <p className="site-footer__copyright">
-            © {year} {site.name}. A demonstration real estate marketplace.
+            © {year} {site.name}. Premium real estate marketplace.
           </p>
-          <p className="site-footer__notice">{site.demoNotice}</p>
+          <p className="site-footer__notice">{site.notice}</p>
         </div>
       </Container>
     </footer>

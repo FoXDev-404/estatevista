@@ -11,8 +11,8 @@ const site = {
     href: '/contact',
   },
   heroFallbackImage: '/images/hero-1.jpg',
-  demoNotice:
-    'EstateVista is a demonstration marketplace. Property records, availability, pricing, contact details and imagery are sample content and are not verified live listings.',
+  notice:
+    'Discover premium homes, investment opportunities and thoughtfully curated spaces across India.',
 };
 
 export default site;

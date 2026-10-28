@@ -145,7 +145,7 @@ export default function Properties() {
     <>
       <PageMeta
         title="Properties"
-        description="Browse available apartments, houses, villas, plots and commercial spaces in the EstateVista demonstration collection."
+        description="Browse available apartments, houses, villas, plots and commercial spaces in the EstateVista collection."
         image="/images/hero-1.jpg"
       />
       <PageHeader

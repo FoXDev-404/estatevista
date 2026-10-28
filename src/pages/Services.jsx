@@ -13,7 +13,7 @@ export default function Services() {
     <>
       <PageMeta
         title="Services"
-        description="Buying, selling, renting, consultation and property management services from EstateVista — a demonstration real estate marketplace."
+        description="Buying, selling, renting, consultation and property management services from EstateVista."
         image="/images/service-4.jpg"
       />
 

@@ -120,7 +120,7 @@ export default function MobileNavigation({ open, onClose }) {
             <Mail size={17} aria-hidden="true" />
             {contactDetails.email.label}
           </a>
-          <p className="mobile-nav__note">{site.demoNotice}</p>
+          <p className="mobile-nav__note">{site.notice}</p>
         </div>
       </div>
     </div>,

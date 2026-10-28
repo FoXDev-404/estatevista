@@ -32,7 +32,7 @@ export default function Contact() {
     <>
       <PageMeta
         title="Contact"
-        description="Contact EstateVista to discuss buying, selling, renting or managing a property. Demonstration contact details and a local-only enquiry form."
+        description="Contact EstateVista to discuss buying, selling, renting or managing a property with personalised guidance."
       />
 
       <PageHeader
@@ -42,10 +42,9 @@ export default function Contact() {
         breadcrumbs={[{ label: 'Home', to: '/' }, { label: 'Contact' }]}
         aside={
           <div className="contact-header-note">
-            <p className="contact-header-note__label">Demonstration contact</p>
+            <p className="contact-header-note__label">Private guidance</p>
             <p>
-              Every contact detail below is a placeholder for this assignment project. No real
-              business is represented.
+              Speak with our advisors about the right neighbourhood, timing and next move for your property journey.
             </p>
           </div>
         }
@@ -59,8 +58,7 @@ export default function Contact() {
                 <p className="eyebrow">Send an enquiry</p>
                 <h2 className="contact-form-card__title">How can we help?</h2>
                 <p className="contact-form-card__intro">
-                  Share a few details below. This local demonstration validates your message but
-                  does not transmit it.
+                  Share a few details below and we will help you assess the right next step.
                 </p>
                 <ContactForm />
               </div>
@@ -175,8 +173,7 @@ export default function Contact() {
                 <div>
                   <p>Map preview not configured</p>
                   <span>
-                    A verified office location and map embed URL can be supplied in
-                    <code> src/data/contact.js</code>. Until then, no real address is implied.
+                    Add a valid map embed URL to the contact details to display the studio location.
                   </span>
                 </div>
               </div>

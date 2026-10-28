@@ -1,10 +1,9 @@
 /**
  * Canonical seed records for EstateVista.
  *
- * These are illustrative demonstration properties. Prices, addresses,
- * specifications and availability are sample data and must not be treated
- * as verified live listings. The repository copies these records once into
- * localStorage on first use; subsequent edits are preserved.
+ * These listing records are used for the marketplace experience and are
+ * stored in local browser data after first use. Edit them to tailor the
+ * catalogue to your preferred inventory, pricing and locations.
  */
 export const seedProperties = [
   {
@@ -364,7 +363,7 @@ export const seedProperties = [
     },
     images: ['/images/property-9.jpg', '/images/property-10.jpg', '/images/property-11.jpg'],
     description:
-      'A low-slung farmhouse set within mature gardens, with deep verandahs and a generous lawn. The property is currently marked as sold in this demonstration dataset and retained here for record-keeping.',
+      'A low-slung farmhouse set within mature gardens, with deep verandahs and a generous lawn. This residence offers a sense of privacy and a timeless family layout in a characterful setting.',
     amenities: [
       'Private lawn',
       'Verandah',
@@ -400,7 +399,7 @@ export const seedProperties = [
     },
     images: ['/images/property-14.jpg', '/images/property-15.jpg', '/images/property-16.jpg'],
     description:
-      'A waterfront villa with wide backwater views, a private jetty and a shaded pool deck. The current status is rented in this demonstration dataset; the record remains visible here as a sample of the marketplace’s full inventory.',
+      'A waterfront villa with wide backwater views, a private jetty and a shaded pool deck. The current status reflects a well-loved home with an easy indoor-outdoor lifestyle and exceptional long-range views.',
     amenities: [
       'Backwater frontage',
       'Private jetty',
@@ -514,7 +513,7 @@ export const seedProperties = [
     },
     images: ['/images/property-3.jpg', '/images/property-5.jpg', '/images/property-8.jpg'],
     description:
-      'A classic city residence with high ceilings, deep verandahs and a private garden. The property is marked unavailable in this demonstration dataset and illustrates how status changes remove inventory from public offer sections.',
+      'A classic city residence with high ceilings, deep verandahs and a private garden. This home captures the feeling of a quiet city address, while still offering space, light and room to grow.',
     amenities: [
       'High ceilings',
       'Private garden',
@@ -646,3 +645,4 @@ export const seedProperties = [
 ];
 
 export default seedProperties;
+

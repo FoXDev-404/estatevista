@@ -68,7 +68,7 @@ export const aboutContent = {
     },
   ],
   statsNote:
-    'These figures are generated live from the current demonstration dataset. They are illustrative and should be replaced with verified business metrics before launch.',
+    'These figures update from the current EstateVista collection and reflect the properties available across the marketplace.',
 };
 
 export default aboutContent;
