@@ -43,7 +43,7 @@ export default function AdminPropertyEdit() {
   }
 
   const handleSubmit = async (record) => {
-    const updated = updateProperty(property.id, record);
+    const updated = await updateProperty(property.id, record);
     addToast(`Changes to "${updated.title}" were saved.`, 'success');
     navigate('/admin/properties');
   };
@@ -52,7 +52,7 @@ export default function AdminPropertyEdit() {
     <>
       <PageMeta
         title={`Edit ${property.title}`}
-        description="Edit a property record in the EstateVista local property studio."
+        description="Edit a property record in the EstateVista property studio."
         noIndex
       />
       <Container className="admin-page admin-form-page">

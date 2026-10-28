@@ -30,6 +30,9 @@ export default function AdminProperties() {
     stats,
     deleteProperty,
     resetProperties,
+    importProperties,
+    isLoading,
+    error,
   } = useProperties();
   const { addToast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
@@ -38,6 +41,7 @@ export default function AdminProperties() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [resetOpen, setResetOpen] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
 
   const filteredProperties = useMemo(() => {
     const searched = filterProperties(
@@ -62,7 +66,7 @@ export default function AdminProperties() {
     if (!pendingDelete) return;
     setIsDeleting(true);
     try {
-      deleteProperty(pendingDelete.id);
+      await deleteProperty(pendingDelete.id);
       addToast(`"${pendingDelete.title}" was deleted.`, 'success');
       setPendingDelete(null);
     } catch (error) {
@@ -72,10 +76,10 @@ export default function AdminProperties() {
     }
   };
 
-  const handleReset = () => {
+  const handleReset = async () => {
     setIsResetting(true);
     try {
-      resetProperties();
+      await resetProperties();
       addToast('Property data was restored.', 'success');
       setResetOpen(false);
       setSearchTerm('');
@@ -90,6 +94,59 @@ export default function AdminProperties() {
   const clearFilters = () => {
     setSearchTerm('');
     setStatusFilter('');
+  };
+
+  if (isLoading) {
+    return (
+      <Container className="admin-page">
+        <p className="admin-page__description" role="status">Loading shared property records…</p>
+      </Container>
+    );
+  }
+
+  if (error) {
+    return (
+      <Container className="admin-page">
+        <p className="admin-page__description" role="alert">
+          Property records could not be loaded: {error.message}
+        </p>
+      </Container>
+    );
+  }
+
+  const handleExport = async () => {
+    const blob = new Blob(
+      [JSON.stringify({ exportedAt: new Date().toISOString(), properties }, null, 2)],
+      { type: 'application/json' },
+    );
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `estatevista-properties-${new Date().toISOString().slice(0, 10)}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImport = async (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+    setIsImporting(true);
+    try {
+      const parsed = JSON.parse(await file.text());
+      const records = Array.isArray(parsed) ? parsed : parsed.properties;
+      if (!Array.isArray(records)) throw new Error('The selected file does not contain property records.');
+      const proceed = window.confirm(
+        `Review complete: ${records.length} records are ready to import. Existing IDs and slugs will be skipped. Continue?`,
+      );
+      if (!proceed) return;
+      const result = await importProperties(records, { conflict: 'skip' });
+      addToast(`Imported ${result.inserted} records; skipped ${result.skipped} conflicts.`, 'success');
+    } catch (error) {
+      addToast(error?.message || 'The property file could not be imported.', 'error');
+    } finally {
+      setIsImporting(false);
+    }
   };
 
   return (
@@ -109,6 +166,13 @@ export default function AdminProperties() {
             </p>
           </div>
           <div className="admin-page__actions">
+            <button type="button" className="button button--secondary button--md" onClick={handleExport}>
+              Export local data
+            </button>
+            <label className="button button--secondary button--md">
+              {isImporting ? 'Importing…' : 'Import data'}
+              <input type="file" accept="application/json,.json" onChange={handleImport} hidden disabled={isImporting} />
+            </label>
             <button
               type="button"
               className="button button--secondary button--md"

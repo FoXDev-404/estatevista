@@ -105,6 +105,89 @@ npm run dev
 
 Open the URL printed by Vite, typically <http://localhost:5173/>.
 
+## Shared Supabase property data
+
+The public website can use Supabase as the shared source of truth for property records. When
+Supabase variables are present, anonymous visitors can read only `available` properties and
+authenticated administrators can manage all statuses. When the variables are absent, the app
+uses the original local browser repository for tests and offline development only; this mode is
+not a shared production database.
+
+### Environment variables
+
+Copy `.env.example` to `.env.local` and set:
+
+```text
+VITE_SUPABASE_URL=https://your-project.supabase.co
+VITE_SUPABASE_PUBLISHABLE_KEY=your-public-publishable-key
+```
+
+Only the URL and publishable browser key belong in Vite variables. Never put a
+`service_role`/secret key in `.env`, `VITE_*` variables, source files, or Vercel client
+environment variables.
+
+### Database setup
+
+1. Create a Supabase project and apply
+   `supabase/migrations/20261028000000_create_property_data.sql` in the SQL editor or with the
+   Supabase CLI.
+2. Create the first administrator in Supabase Authentication. Copy that user's UUID.
+3. In the SQL editor, run
+   `insert into public.admin_users (user_id) values ('AUTH_USER_UUID');`.
+   The `admin_users` table is protected by RLS and users cannot grant themselves access.
+4. Seed the initial catalogue from a trusted local shell. Keep the service-role key out of the
+   repository:
+
+   ```powershell
+   $env:SUPABASE_URL = "https://your-project.supabase.co"
+   $env:SUPABASE_SERVICE_ROLE_KEY = "local-only-secret"
+   npm run seed:supabase
+   ```
+
+   The seed script is idempotent and uses `ignoreDuplicates`; it never deletes or overwrites
+   existing records during normal startup or deployment.
+
+The migration uses typed columns for searchable property fields, JSONB for location and
+specifications, and arrays for images, amenities and facilities. `public.is_admin()` is a
+security-definer lookup used by the property policies. The reset RPC is administrator-only and
+is called only after an explicit confirmation in the admin dashboard.
+
+### Local browser data migration
+
+The admin dashboard's **Export local data** action downloads the current browser collection before
+any migration. **Import data** parses and validates a selected JSON export, previews its record
+count, skips duplicate IDs/slugs, and reports inserted/skipped counts. It never removes the
+original localStorage collection. Verify the shared records before clearing local browser data.
+For unattended or large migrations, use the same validated JSON shape with an administrator-only
+script rather than uploading arbitrary visitor storage.
+
+### Vercel deployment
+
+Add `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` to the Vercel project's environment
+variables for Preview and Production, redeploy, and add the deployed URL to Supabase
+Authentication URL Configuration (Site URL and redirect URLs). Keep `SUPABASE_SERVICE_ROLE_KEY`
+only in a trusted local/CI seed environment; the browser bundle must never receive it.
+
+### Access and troubleshooting
+
+- Anonymous pages query only available properties through RLS; frontend filtering is not the
+  security boundary.
+- A signed-in user without a row in `admin_users` can remain authenticated but cannot read
+  private statuses or mutate records.
+- `42501` or “not authorized” errors usually mean the Auth user UUID was not inserted into
+  `admin_users`, or the migration policies were not applied.
+- A missing/invalid publishable key produces an explicit configuration error rather than
+  silently uploading local data.
+- Supabase is intentionally not reset or reseeded when the app loads. To synchronize intentional
+  seed-file changes, review the diff and run the trusted seed script explicitly.
+
+### Demo-data reset behavior
+
+Reset is an administrator-only, shared database operation. It requires the dashboard
+confirmation and replaces the shared property table with the current seed records through the
+protected `reset_properties_to_seed` function. It never runs during initialization and is not
+available to anonymous visitors.
+
 ### Production preview
 
 ```bash

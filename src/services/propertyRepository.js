@@ -4,6 +4,7 @@ import {
   validatePropertyCollection,
   validatePropertyRecord,
 } from './validation';
+import { isSupabaseConfigured, requireSupabase } from './supabaseClient';
 
 export const PROPERTY_STORAGE_KEY = 'estatevista.properties.v1';
 
@@ -202,6 +203,181 @@ export const reset = () => {
 
 export const getSeedProperties = () => clone(seedProperties);
 
+const toDatabaseProperty = (property) => ({
+  id: property.id,
+  slug: property.slug,
+  title: property.title,
+  type: property.type,
+  purpose: property.purpose,
+  price: property.price,
+  currency: property.currency,
+  location: property.location,
+  specifications: property.specifications,
+  images: property.images,
+  description: property.description,
+  amenities: property.amenities,
+  facilities: property.facilities,
+  status: property.status,
+  featured: property.featured,
+  trending: property.trending,
+  created_at: property.createdAt,
+});
+
+const fromDatabaseProperty = (record) =>
+  normalizeProperty({
+    id: record.id,
+    slug: record.slug,
+    title: record.title,
+    type: record.type,
+    purpose: record.purpose,
+    price: Number(record.price),
+    currency: record.currency,
+    location: record.location,
+    specifications: record.specifications,
+    images: record.images || [],
+    description: record.description,
+    amenities: record.amenities || [],
+    facilities: record.facilities || [],
+    status: record.status,
+    featured: record.featured,
+    trending: record.trending,
+    createdAt: record.created_at,
+  });
+
+const throwDatabaseError = (error, fallback) => {
+  if (!error) return;
+  const message = error.code === '42501'
+    ? 'You are not authorized to change property data.'
+    : error.message || fallback;
+  throw new PropertyStorageError(message);
+};
+
+const getRemoteProperties = async ({ admin = false } = {}) => {
+  const client = requireSupabase();
+  let query = client.from('properties').select('*').order('created_at', { ascending: false });
+  if (!admin) query = query.eq('status', 'available');
+  const { data, error } = await query;
+  throwDatabaseError(error, 'Property data could not be loaded from Supabase.');
+  return (data || []).map(fromDatabaseProperty);
+};
+
+export const getAllAsync = async ({ admin = false } = {}) => {
+  if (!isSupabaseConfigured) return getAll();
+  return getRemoteProperties({ admin });
+};
+
+export const getByIdAsync = async (id, options) => {
+  const properties = await getAllAsync(options);
+  const normalizedId = String(id || '').trim().toUpperCase();
+  return properties.find((property) => property.id === normalizedId) || null;
+};
+
+export const getBySlugAsync = async (slug, options) => {
+  const properties = await getAllAsync(options);
+  const normalizedSlug = String(slug || '').trim().toLowerCase();
+  return properties.find((property) => property.slug === normalizedSlug) || null;
+};
+
+export const createAsync = async (input) => {
+  if (!isSupabaseConfigured) return create(input);
+  const existing = await getRemoteProperties({ admin: true });
+  const property = normalizeProperty({
+    ...input,
+    id: input?.id || generatePropertyId(existing),
+    createdAt: input?.createdAt || getToday(),
+    currency: input?.currency || 'INR',
+    status: input?.status || 'available',
+  });
+  const validation = validatePropertyRecord(property, { properties: existing });
+  if (!validation.isValid) throw new PropertyValidationError(validation.errors);
+  const client = requireSupabase();
+  const { data, error } = await client
+    .from('properties')
+    .insert(toDatabaseProperty(property))
+    .select()
+    .single();
+  throwDatabaseError(error, 'The property could not be created.');
+  return fromDatabaseProperty(data);
+};
+
+export const updateAsync = async (id, updates) => {
+  if (!isSupabaseConfigured) return update(id, updates);
+  const existing = await getByIdAsync(id, { admin: true });
+  if (!existing) throw new PropertyNotFoundError(id);
+  const all = await getRemoteProperties({ admin: true });
+  const candidate = normalizeProperty({
+    ...existing,
+    ...updates,
+    id: existing.id,
+    createdAt: existing.createdAt,
+    currency: existing.currency || 'INR',
+  });
+  const validation = validatePropertyRecord(candidate, {
+    properties: all,
+    ignoreId: existing.id,
+  });
+  if (!validation.isValid) throw new PropertyValidationError(validation.errors);
+  const client = requireSupabase();
+  const { data, error } = await client
+    .from('properties')
+    .update(toDatabaseProperty(candidate))
+    .eq('id', existing.id)
+    .select()
+    .single();
+  throwDatabaseError(error, 'The property could not be updated.');
+  return fromDatabaseProperty(data);
+};
+
+export const removeAsync = async (id) => {
+  if (!isSupabaseConfigured) return remove(id);
+  const existing = await getByIdAsync(id, { admin: true });
+  if (!existing) throw new PropertyNotFoundError(id);
+  const client = requireSupabase();
+  const { error } = await client.from('properties').delete().eq('id', existing.id);
+  throwDatabaseError(error, 'The property could not be deleted.');
+  return existing;
+};
+
+export const resetAsync = async () => {
+  if (!isSupabaseConfigured) return reset();
+  const client = requireSupabase();
+  const { data, error } = await client.rpc('reset_properties_to_seed', {
+    seed_records: seedProperties.map(toDatabaseProperty),
+  });
+  throwDatabaseError(error, 'The shared property collection could not be reset.');
+  return (data || []).map(fromDatabaseProperty);
+};
+
+export const exportLocalProperties = () => {
+  const properties = getAll();
+  return JSON.stringify({ exportedAt: new Date().toISOString(), properties }, null, 2);
+};
+
+export const importPropertiesAsync = async (records, { conflict = 'skip' } = {}) => {
+  const validation = validatePropertyCollection(records);
+  if (!validation.isValid) throw new PropertyValidationError(validation.errors);
+  const current = isSupabaseConfigured ? await getRemoteProperties({ admin: true }) : getAll();
+  const existingIds = new Set(current.map((property) => property.id));
+  const existingSlugs = new Set(current.map((property) => property.slug));
+  const candidates = records.filter((property) => {
+    const duplicate = existingIds.has(property.id) || existingSlugs.has(property.slug);
+    return !duplicate || conflict === 'overwrite';
+  });
+  if (!isSupabaseConfigured) {
+    const next = conflict === 'overwrite'
+      ? records
+      : [...current, ...candidates.filter((property) => !existingIds.has(property.id))];
+    writeCollection(next);
+    return { inserted: candidates.length, skipped: records.length - candidates.length, failed: 0 };
+  }
+  const client = requireSupabase();
+  const { error } = await client
+    .from('properties')
+    .upsert(candidates.map(toDatabaseProperty), { onConflict: 'id' });
+  throwDatabaseError(error, 'Imported property records could not be saved.');
+  return { inserted: candidates.length, skipped: records.length - candidates.length, failed: 0 };
+};
+
 const propertyRepository = {
   storageKey: PROPERTY_STORAGE_KEY,
   getAll,
@@ -215,6 +391,15 @@ const propertyRepository = {
   reset,
   generatePropertyId,
   getSeedProperties,
+  getAllAsync,
+  getByIdAsync,
+  getBySlugAsync,
+  createAsync,
+  updateAsync,
+  removeAsync,
+  resetAsync,
+  exportLocalProperties,
+  importPropertiesAsync,
 };
 
 export default propertyRepository;
