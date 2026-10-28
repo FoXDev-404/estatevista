@@ -1,5 +1,5 @@
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { ChevronLeft, ExternalLink } from 'lucide-react';
+import { ChevronLeft, ExternalLink, MapPin } from 'lucide-react';
 import Container from '../../components/common/Container';
 import PageMeta from '../../components/common/PageMeta';
 import ErrorState from '../../components/common/ErrorState';
@@ -7,6 +7,7 @@ import StatusBadge from '../../components/common/StatusBadge';
 import AdminPropertyForm from '../../components/admin/PropertyForm';
 import useProperties from '../../hooks/useProperties';
 import useToast from '../../hooks/useToast';
+import { getPropertyMapEmbedUrl } from '../../services/propertyMap';
 
 export default function AdminPropertyEdit() {
   const { id } = useParams();
@@ -14,6 +15,7 @@ export default function AdminPropertyEdit() {
   const { addToast } = useToast();
   const navigate = useNavigate();
   const property = getById(id);
+  const mapEmbedUrl = property ? getPropertyMapEmbedUrl(property) : null;
 
   if (!property) {
     return (
@@ -83,6 +85,35 @@ export default function AdminPropertyEdit() {
               View public page
             </Link>
           </div>
+        </div>
+
+        <div className="admin-map-card" style={{ marginBottom: '1.5rem' }}>
+          <div className="admin-map-card__header">
+            <div>
+              <p className="eyebrow">Location map</p>
+              <h2 className="admin-page__subtitle">Property location</h2>
+            </div>
+            <span className="admin-map-card__meta">
+              <MapPin size={16} aria-hidden="true" />
+              {property.location?.area}, {property.location?.city}
+            </span>
+          </div>
+
+          {mapEmbedUrl ? (
+            <iframe
+              className="admin-map-card__frame"
+              src={mapEmbedUrl}
+              title={`${property.title} location map`}
+              loading="lazy"
+              referrerPolicy="no-referrer-when-downgrade"
+              allowFullScreen
+            />
+          ) : (
+            <div className="admin-map-card__placeholder">
+              <MapPin size={20} aria-hidden="true" />
+              <p>Map preview not configured for this property.</p>
+            </div>
+          )}
         </div>
 
         <AdminPropertyForm

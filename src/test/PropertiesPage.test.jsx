@@ -6,6 +6,7 @@ import Properties from '../pages/Properties';
 import PropertyDetails from '../pages/PropertyDetails';
 import PropertyProvider from '../context/PropertyProvider';
 import seedProperties from '../data/properties';
+import { getPropertyMapEmbedUrl } from '../services/propertyMap';
 import { filterProperties } from '../services/propertySelectors';
 
 function LocationProbe() {
@@ -108,6 +109,13 @@ describe('Properties page', () => {
     const mapFrame = screen.getByTitle('Marine Line Apartment location map');
     expect(mapFrame).toHaveAttribute('src', expect.stringContaining('openstreetmap.org/export/embed.html'));
     expect(mapFrame).toHaveAttribute('src', expect.stringContaining('marker=19.076,72.8777'));
+  });
+
+  it('maps missing city names like Gurugram to a real embed coordinate', () => {
+    const url = getPropertyMapEmbedUrl({ location: { city: 'Gurugram' } });
+
+    expect(url).toContain('openstreetmap.org/export/embed.html');
+    expect(url).toContain('marker=28.4595,77.0266');
   });
 
   it('changes sorting from the toolbar', async () => {

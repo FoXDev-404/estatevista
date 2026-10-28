@@ -196,6 +196,59 @@
   letter-spacing: 0.04em;
 }
 
+.admin-map-card {
+  padding: 1.25rem;
+  border: 1px solid var(--color-line);
+  background: var(--color-white);
+}
+
+.admin-map-card__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
+  margin-bottom: 1rem;
+}
+
+.admin-map-card__header h2 {
+  margin-top: 0.2rem;
+  font-size: 1.2rem;
+}
+
+.admin-map-card__meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--color-muted);
+  font-size: 0.72rem;
+}
+
+.admin-map-card__meta svg {
+  color: var(--color-gold-deep);
+}
+
+.admin-map-card__frame {
+  display: block;
+  width: 100%;
+  min-height: 240px;
+  border: 0;
+}
+
+.admin-map-card__placeholder {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 1rem 1.1rem;
+  border: 1px dashed var(--color-line-strong);
+  background: var(--color-ivory);
+  color: var(--color-muted);
+}
+
+.admin-map-card__placeholder svg {
+  color: var(--color-gold-deep);
+}
+
 /* --------------------------------------------------------------------------
    Statistics
    -------------------------------------------------------------------------- */
