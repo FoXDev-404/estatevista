@@ -4,8 +4,6 @@ A premium, data-driven real estate marketplace built with React and Vite. Estate
 
 This project was prepared as a submission for the **Junior Frontend Developer real estate assignment from [Digitalsdaddy.com](https://digitalsdaddy.com)**. Digitalsdaddy.com is credited as the source of the assignment brief only; the EstateVista brand, design and implementation are independent work.
 
-![EstateVista homepage](screens/home-top-1440.png)
-
 ---
 
 ## Contents
@@ -164,7 +162,6 @@ estatevista/
 │   ├── favicon.svg
 │   ├── fonts/                     # Local Cormorant Garamond and Manrope WOFF2 files
 │   └── images/                    # 47 locally hosted property images
-├── screens/                       # Browser QA screenshots
 ├── src/
 │   ├── app/
 │   │   ├── App.jsx                # Toast + property providers
