@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="EstateVista monogram">
+  <rect width="64" height="64" fill="#191D1B" />
+  <path d="M13 18h19v5H19v8h11v5H19v10h14v5H13V18Z" fill="#F8F6F1" />
+  <path d="M39 18h6.5l5 22 5-22H62L53.8 51H44.2L36 18h5.9Z" fill="#B99A62" transform="translate(-2 0)" />
+  <path d="M11 57h42" stroke="#B99A62" stroke-width="1.5" />
+</svg>
