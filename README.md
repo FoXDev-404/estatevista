@@ -1,8 +1,10 @@
-# EstateVista
+# EstateVista — Assignment Submission
 
-A premium, data-driven real estate marketplace built with React and Vite. EstateVista presents a curated collection of homes, land and commercial spaces across India, with a complete public experience and a local property-management studio.
+EstateVista is a **frontend-only real-estate website created for a Junior Frontend Developer assignment**. It is not a real estate company, live marketplace, production business, or verified property service.
 
-This project was prepared as a submission for the **Junior Frontend Developer real estate assignment from [Digitalsdaddy.com](https://digitalsdaddy.com)**. Digitalsdaddy.com is credited as the source of the assignment brief only; the EstateVista brand, design and implementation are independent work.
+The project demonstrates the requested pages, reusable React components, data-driven content, property search, property details, maps, forms, and a browser-based admin CRUD experience. It is intended for evaluation and portfolio presentation, not for processing real property transactions.
+
+The assignment brief was provided by [Digitalsdaddy.com](https://digitalsdaddy.com). EstateVista is an independent implementation created for that assignment.
 
 ---
 
@@ -32,9 +34,9 @@ This project was prepared as a submission for the **Junior Frontend Developer re
 
 ## Overview
 
-EstateVista is a front-end marketplace concept. All repeatable content lives in `src/data/`, and reusable React components render that content without page-specific copies. Adding a property, changing a hero slide, updating a service or editing contact details flows through the relevant public pages automatically.
+EstateVista is a frontend assignment project. All repeatable content lives in `src/data/`, and reusable React components render that content without page-specific copies. Adding a property, changing a hero slide, updating a service, or editing contact details flows through the relevant pages automatically.
 
-The property collection is presented as 16 coherent sample records: 13 available listings plus sold, rented and unavailable records that remain manageable in the admin studio but are excluded from public collection selectors.
+The property collection contains 16 fictional sample records: 13 available listings plus sold, rented, and unavailable records that remain manageable in the admin studio but are excluded from public collection selectors.
 
 The application includes:
 
@@ -48,7 +50,7 @@ The application includes:
 
 ## Feature highlights
 
-### Public website
+### Assignment website
 
 | Page | Highlights |
 | --- | --- |
@@ -60,7 +62,7 @@ The application includes:
 | **Contact** | Validated contact form, phone/email/address, business hours, social links and an OpenStreetMap office map. |
 | **404** | Branded not-found experience with links back to the collection and the homepage. |
 
-### Admin studio
+### Assignment admin studio
 
 - Dashboard totals for all, available, sold, rented and unavailable records.
 - Search by reference, title, slug, city, area or type.
@@ -68,7 +70,7 @@ The application includes:
 - Create and edit forms with shared validation and duplicate ID/slug protection.
 - Accessible delete confirmation and full reset confirmation.
 - Success and error toasts.
-- Changes persist immediately and appear on public pages without a rebuild.
+- Changes persist immediately in the current browser and appear on public pages without a rebuild.
 
 ## Tech stack
 
@@ -151,7 +153,7 @@ No environment variables, API keys or external services are required. On first v
 | `/admin/properties/new` | Create property |
 | `/admin/properties/:id/edit` | Edit property |
 
-Unknown property slugs and unknown non-admin routes render the branded 404 page. The admin studio is an unauthenticated local browser-only tool.
+Unknown property slugs and unknown non-admin routes render the branded 404 page. The admin studio is an unauthenticated browser-only assignment tool.
 
 ## Project architecture
 
@@ -429,7 +431,7 @@ npm run lint
 npm run build
 ```
 
-The implementation is verified in a real Chromium browser at 320px, 390px and desktop widths, including all public and admin routes, mobile navigation, gallery, filters, pagination and a complete create → reload → update → delete CRUD cycle.
+Browser QA was performed in Chromium at 320px, 390px, and desktop widths, covering the public and admin assignment routes, mobile navigation, gallery, filters, pagination, maps, and the local create → reload → update → delete CRUD flow.
 
 ## Accessibility
 
@@ -456,7 +458,7 @@ The CSS layers provide desktop, tablet and mobile refinements at 1280, 1100, 102
 - Scrollable admin tables or record cards.
 - Reduced type sizes and spacing at 320px.
 
-## Deployment
+## Assignment deployment
 
 The project is a single-page application and needs a host that rewrites unknown paths to `index.html`.
 
@@ -481,9 +483,9 @@ Build settings:
 
 Run `npm run build` and upload `dist/`. Configure an SPA fallback so routes such as `/properties/the-arbour-residence-worli` and `/admin/properties` resolve to `index.html`.
 
-### Important deployment note
+### Important assignment limitation
 
-The admin studio is a front-end property manager for local browser use. Its data is stored in each visitor's browser. It is not multi-user, authenticated or backed by a database. Do not treat it as a production property-management system.
+This deployment is for demonstrating the assignment website. The admin studio stores data in each visitor's browser. It is not multi-user, authenticated, or backed by a database. Do not use it as a production property-management system or as a source of verified property information.
 
 ## Assignment requirement map
 
@@ -510,15 +512,15 @@ The admin studio is a front-end property manager for local browser use. Its data
 | Responsive design | Tested from 320px through desktop. |
 | README documentation | This document. |
 
-## Limitations
+## Assignment scope and limitations
 
-- **Property records are local catalogue content.** Property records, prices, availability, addresses, team members, testimonials and contact details are curated catalogue content for the project and should be replaced with verified listings for production use.
-- **No backend.** The application has no server, database, authentication or role-based access control. The admin studio is open to anyone who visits `/admin`.
+- **Fictional content.** Property records, prices, availability, addresses, team members, testimonials, and contact details are fictional assignment content. They are not verified listings or real business information.
+- **No production backend.** The application has no server, database, authentication, or role-based access control. The admin studio is open to anyone who visits `/admin`.
 - **Per-browser storage.** Records do not synchronise across browsers or devices. Clearing site data removes local changes.
-- **Form submissions are simulated.** Contact and property enquiry forms validate input and show success feedback, but they do not send email or persist messages.
+- **Form submissions are simulated.** Contact and property enquiry forms validate input and show success feedback, but they do not send email, create leads, or persist messages.
 - **Maps use OpenStreetMap embeds.** The contact office map is configured in `src/data/contact.js`; property detail and admin edit maps resolve from property coordinates or city fallbacks through `src/services/propertyMap.js`.
 - **Image and font assets are local project assets.** Photography is sourced from Unsplash for the project build; replace it with licensed production assets before commercial use.
-- **No payments, saved searches, user accounts or CRM integration.** These are outside the assignment scope.
+- **No payments, saved searches, user accounts, CRM integration, listing verification, or transaction processing.** These are outside the assignment scope.
 - **Seed edits require a reset for existing browsers.** Once a valid collection is stored, the data file is not re-applied automatically.
 - **Browser storage can be unavailable.** The repository falls back to memory, but changes then last only for the current session.
 
@@ -530,4 +532,4 @@ The admin studio is a front-end property manager for local browser use. Its data
 - **Icons:** [Lucide](https://lucide.dev).
 - **Framework and tooling:** React, React Router, Vite, Vitest, Testing Library and ESLint.
 
-EstateVista is an independent real-estate marketplace concept. It is not affiliated with, endorsed by or sponsored by any property brand, agency or listing service.
+EstateVista is an independent assignment project and frontend demonstration. It is not affiliated with, endorsed by, or sponsored by any property brand, agency, listing service, or real estate company.
