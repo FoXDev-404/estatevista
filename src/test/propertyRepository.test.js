@@ -14,6 +14,7 @@ import propertyRepository, {
   update,
 } from '../services/propertyRepository';
 import { makeProperty } from './fixtures';
+import { seedProperties } from '../data/properties';
 
 const storedCollection = () => JSON.parse(localStorage.getItem(PROPERTY_STORAGE_KEY));
 
@@ -27,8 +28,8 @@ describe('propertyRepository', () => {
 
     const properties = getAll();
 
-    expect(properties).toHaveLength(16);
-    expect(storedCollection()).toHaveLength(16);
+    expect(properties).toHaveLength(seedProperties.length);
+    expect(storedCollection()).toHaveLength(seedProperties.length);
     expect(properties[0]).toMatchObject({
       id: 'PROP-001',
       slug: 'the-arbour-residence-worli',
@@ -54,8 +55,8 @@ describe('propertyRepository', () => {
 
     const properties = getAll();
 
-    expect(properties).toHaveLength(16);
-    expect(storedCollection()).toHaveLength(16);
+    expect(properties).toHaveLength(seedProperties.length);
+    expect(storedCollection()).toHaveLength(seedProperties.length);
   });
 
   it('recovers when a saved collection contains invalid records', () => {
@@ -64,7 +65,7 @@ describe('propertyRepository', () => {
       JSON.stringify([{ id: 'PROP-001', title: 'Incomplete record' }]),
     );
 
-    expect(getAll()).toHaveLength(16);
+    expect(getAll()).toHaveLength(seedProperties.length);
   });
 
   it('finds records by ID and slug without case sensitivity', () => {
@@ -95,13 +96,14 @@ describe('propertyRepository', () => {
       }),
     );
 
-    expect(created.id).toBe('PROP-017');
+    const nextId = generatePropertyId(seedProperties);
+    expect(created.id).toBe(nextId);
     expect(created.title).toBe('Harbour Lights Apartment');
     expect(created.price).toBe(12500000);
     expect(created.status).toBe('available');
     expect(created.createdAt).toMatch(/^\d{4}-\d{2}-\d{2}$/);
-    expect(getById('PROP-017')).toEqual(created);
-    expect(storedCollection()).toHaveLength(17);
+    expect(getById(nextId)).toEqual(created);
+    expect(storedCollection()).toHaveLength(seedProperties.length + 1);
   });
 
   it('rejects duplicate IDs', () => {
@@ -167,20 +169,20 @@ describe('propertyRepository', () => {
 
     expect(removed.id).toBe('PROP-001');
     expect(getById('PROP-001')).toBeNull();
-    expect(getAll()).toHaveLength(15);
-    expect(storedCollection()).toHaveLength(15);
+    expect(getAll()).toHaveLength(seedProperties.length - 1);
+    expect(storedCollection()).toHaveLength(seedProperties.length - 1);
   });
 
   it('resets the collection to the original seeds', () => {
     getAll();
     remove('PROP-001');
-    expect(getAll()).toHaveLength(15);
+    expect(getAll()).toHaveLength(seedProperties.length - 1);
 
     const seeded = reset();
 
-    expect(seeded).toHaveLength(16);
-    expect(getAll()).toHaveLength(16);
-    expect(storedCollection()).toHaveLength(16);
+    expect(seeded).toHaveLength(seedProperties.length);
+    expect(getAll()).toHaveLength(seedProperties.length);
+    expect(storedCollection()).toHaveLength(seedProperties.length);
   });
 
   it('reports a storage failure instead of silently dropping a write', () => {

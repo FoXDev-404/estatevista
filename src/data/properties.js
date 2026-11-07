@@ -654,6 +654,56 @@ export const seedProperties = [
     trending: false,
     createdAt: '2026-10-21',
   },
+  {
+    id: 'PROP-017',
+    slug: 'the-aurelia-residences-worli',
+    title: 'The Aurelia Residences',
+    type: 'apartment',
+    purpose: 'sale',
+    price: 87487000,
+    currency: 'INR',
+    location: {
+      city: 'Mumbai',
+      area: 'Worli',
+      address: '1402, The Aurelia Residences, Dr. Annie Besant Road, Worli, Mumbai, Maharashtra 400018',
+    },
+    specifications: {
+      bedrooms: 3,
+      bathrooms: 3,
+      area: 1850,
+      areaUnit: 'sqft',
+    },
+    images: [
+      'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c',
+      'https://images.unsplash.com/photo-1600607687920-4e2a09cf159d',
+      'https://images.unsplash.com/photo-1600566753086-00f18fb6b3ea',
+      'https://images.unsplash.com/photo-1600607687644-c7171b42498f',
+    ],
+    description:
+      'Experience elevated urban living at The Aurelia Residences, an elegant 3 BHK luxury apartment located in the heart of Worli, Mumbai. Designed with contemporary architecture and premium finishes, this residence features spacious interiors, expansive floor-to-ceiling windows, and thoughtfully planned living spaces.\n\nEnjoy a sophisticated lifestyle with excellent connectivity to Lower Parel, Bandra-Worli Sea Link, premium shopping destinations, leading schools, and major business districts. An ideal home for families seeking comfort, convenience, and refined city living.',
+    amenities: [
+      'Private swimming pool',
+      'Landscaped garden',
+      'Fully equipped gym',
+      'Clubhouse',
+      'Jogging track',
+      "Children's play area",
+      'Indoor games room',
+    ],
+    facilities: [
+      '24/7 security',
+      'CCTV surveillance',
+      'Power backup',
+      'Rainwater harvesting',
+      'High-speed elevators',
+      'Covered car parking',
+      'Fire safety systems',
+    ],
+    status: 'available',
+    featured: true,
+    trending: false,
+    createdAt: '2026-11-07',
+  },
 ];
 
 export default seedProperties;
