@@ -43,7 +43,7 @@ export default function AdminPropertyEdit() {
   }
 
   const handleSubmit = async (record) => {
-    const updated = updateProperty(property.id, record);
+    const updated = await updateProperty(property.id, record);
     addToast(`Changes to "${updated.title}" were saved.`, 'success');
     navigate('/admin/properties');
   };

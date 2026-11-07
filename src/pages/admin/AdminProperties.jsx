@@ -62,7 +62,7 @@ export default function AdminProperties() {
     if (!pendingDelete) return;
     setIsDeleting(true);
     try {
-      deleteProperty(pendingDelete.id);
+      await deleteProperty(pendingDelete.id);
       addToast(`"${pendingDelete.title}" was deleted.`, 'success');
       setPendingDelete(null);
     } catch (error) {
@@ -72,10 +72,10 @@ export default function AdminProperties() {
     }
   };
 
-  const handleReset = () => {
+  const handleReset = async () => {
     setIsResetting(true);
     try {
-      resetProperties();
+      await resetProperties();
       addToast('Property data was restored.', 'success');
       setResetOpen(false);
       setSearchTerm('');

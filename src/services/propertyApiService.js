@@ -23,35 +23,29 @@ export async function checkApiHealth() {
 }
 
 /**
- * Fetch all properties. Falls back to local storage if API is unavailable or unconfigured.
+ * Fetch all properties from Supabase API.
  */
 export async function getAllProperties(filters = {}) {
   if (isTestEnv) return propertyRepository.getAll();
 
-  try {
-    const params = new URLSearchParams();
-    if (filters.type && filters.type !== 'all') params.set('type', filters.type);
-    if (filters.purpose && filters.purpose !== 'all') params.set('purpose', filters.purpose);
-    if (filters.city && filters.city !== 'all') params.set('city', filters.city);
-    if (filters.featured) params.set('featured', 'true');
-    if (filters.sort) params.set('sort', filters.sort);
-    if (filters.search) params.set('search', filters.search);
+  const params = new URLSearchParams();
+  if (filters.type && filters.type !== 'all') params.set('type', filters.type);
+  if (filters.purpose && filters.purpose !== 'all') params.set('purpose', filters.purpose);
+  if (filters.city && filters.city !== 'all') params.set('city', filters.city);
+  if (filters.featured) params.set('featured', 'true');
+  if (filters.sort) params.set('sort', filters.sort);
+  if (filters.search) params.set('search', filters.search);
 
-    const queryString = params.toString();
-    const url = queryString ? `${API_BASE}/properties?${queryString}` : `${API_BASE}/properties`;
+  const queryString = params.toString();
+  const url = queryString ? `${API_BASE}/properties?${queryString}` : `${API_BASE}/properties`;
 
-    const res = await fetch(url, { signal: AbortSignal.timeout(3000) });
-    if (res.ok) {
-      const data = await res.json();
-      if (Array.isArray(data) && data.length > 0) {
-        return data;
-      }
-    }
-  } catch (err) {
-    console.debug('API fetch failed, using local repository fallback:', err?.message);
+  const res = await fetch(url);
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || 'Failed to fetch properties from Supabase.');
   }
 
-  return propertyRepository.getAll();
+  return await res.json();
 }
 
 /**
@@ -78,108 +72,76 @@ export async function getPropertyByIdOrSlug(idOrSlug) {
  * Create a new property.
  */
 export async function createPropertyApi(record) {
-  // Always update local repository as fallback/cache
-  let localCreated = null;
-  try {
-    localCreated = propertyRepository.create(record);
-  } catch (e) {
-    console.warn('Local repository validation/storage error:', e);
+  if (isTestEnv) return propertyRepository.create(record);
+
+  const res = await fetch(`${API_BASE}/properties`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(record),
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || 'Failed to create property in Supabase.');
   }
 
-  try {
-    const res = await fetch(`${API_BASE}/properties`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(record),
-      signal: AbortSignal.timeout(4000),
-    });
-
-    if (res.ok) {
-      return await res.json();
-    }
-  } catch (err) {
-    console.warn('API create failed, returning locally stored property:', err?.message);
-  }
-
-  return localCreated || record;
+  return await res.json();
 }
 
 /**
  * Update an existing property.
  */
 export async function updatePropertyApi(id, updates) {
-  let localUpdated = null;
-  try {
-    localUpdated = propertyRepository.update(id, updates);
-  } catch (e) {
-    console.warn('Local repository update error:', e);
+  if (isTestEnv) return propertyRepository.update(id, updates);
+
+  const res = await fetch(`${API_BASE}/properties/${encodeURIComponent(id)}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(updates),
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || 'Failed to update property in Supabase.');
   }
 
-  try {
-    const res = await fetch(`${API_BASE}/properties/${encodeURIComponent(id)}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(updates),
-      signal: AbortSignal.timeout(4000),
-    });
-
-    if (res.ok) {
-      return await res.json();
-    }
-  } catch (err) {
-    console.warn('API update failed, returning locally updated property:', err?.message);
-  }
-
-  return localUpdated || { id, ...updates };
+  return await res.json();
 }
 
 /**
  * Remove an existing property.
  */
 export async function deletePropertyApi(id) {
-  let localRemoved = null;
-  try {
-    localRemoved = propertyRepository.remove(id);
-  } catch (e) {
-    console.warn('Local repository remove error:', e);
+  if (isTestEnv) return propertyRepository.remove(id);
+
+  const res = await fetch(`${API_BASE}/properties/${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || 'Failed to delete property in Supabase.');
   }
 
-  try {
-    const res = await fetch(`${API_BASE}/properties/${encodeURIComponent(id)}`, {
-      method: 'DELETE',
-      signal: AbortSignal.timeout(4000),
-    });
-
-    if (res.ok) {
-      return await res.json();
-    }
-  } catch (err) {
-    console.warn('API delete failed, using local result:', err?.message);
-  }
-
-  return localRemoved;
+  return await res.json();
 }
 
 /**
- * Reset properties to canonical seeds.
+ * Reset properties to canonical seeds in Supabase.
  */
 export async function resetPropertiesApi() {
-  const localReset = propertyRepository.reset();
+  if (isTestEnv) return propertyRepository.reset();
 
-  try {
-    const res = await fetch(`${API_BASE}/properties/reset`, {
-      method: 'POST',
-      signal: AbortSignal.timeout(5000),
-    });
+  const res = await fetch(`${API_BASE}/properties/reset`, {
+    method: 'POST',
+  });
 
-    if (res.ok) {
-      return await res.json();
-    }
-  } catch (err) {
-    console.warn('API reset failed, returned local reset seeds:', err?.message);
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || 'Failed to reset properties in Supabase.');
   }
 
-  return localReset;
+  return await res.json();
 }
 
 /**

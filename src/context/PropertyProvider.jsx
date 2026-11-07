@@ -1,145 +1,110 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import PropertyContext from './PropertyContext';
-import propertyRepository, {
-  PROPERTY_STORAGE_KEY,
-} from '../services/propertyRepository';
 import propertyApiService from '../services/propertyApiService';
 import { getPropertyStats } from '../services/propertySelectors';
+import { seedProperties } from '../data/properties';
+
+const isTestEnv = typeof process !== 'undefined' && process.env?.NODE_ENV === 'test';
 
 export default function PropertyProvider({ children }) {
-  const [properties, setProperties] = useState(() => propertyRepository.getAll());
+  // In tests, start with canonical seed; in browser, start with seed and immediately fetch live Supabase
+  const [properties, setProperties] = useState(() => seedProperties);
   const [isLiveBackend, setIsLiveBackend] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
 
-  // Sync with live backend API on mount
+  // Fetch directly from live Supabase database on mount
   useEffect(() => {
-    // Skip remote fetch in headless testing environment
-    if (typeof process !== 'undefined' && process.env?.NODE_ENV === 'test') {
-      return;
-    }
+    if (isTestEnv) return;
 
-    let isMounted = true;
+    let ignore = false;
 
-    async function syncWithApi() {
+    async function load() {
       setIsSyncing(true);
       try {
         const liveProperties = await propertyApiService.getAll();
-        if (isMounted && Array.isArray(liveProperties) && liveProperties.length > 0) {
+        if (!ignore && Array.isArray(liveProperties) && liveProperties.length > 0) {
           setProperties(liveProperties);
           setIsLiveBackend(true);
-          try {
-            if (typeof window !== 'undefined' && window.localStorage) {
-              window.localStorage.setItem(PROPERTY_STORAGE_KEY, JSON.stringify(liveProperties));
-            }
-          } catch {
-            // ignore storage quota errors
-          }
         }
       } catch (err) {
-        console.debug('Using local repository cache:', err?.message);
+        console.warn('Could not fetch from Supabase, using defaults:', err?.message);
       } finally {
-        if (isMounted) setIsSyncing(false);
+        if (!ignore) {
+          setIsSyncing(false);
+        }
       }
     }
 
-    syncWithApi();
+    load();
 
     return () => {
-      isMounted = false;
+      ignore = true;
     };
   }, []);
 
   const refresh = useCallback(async () => {
     setIsSyncing(true);
     try {
-      const live = await propertyApiService.getAll();
-      if (Array.isArray(live) && live.length > 0) {
-        setProperties(live);
-        try {
-          if (typeof window !== 'undefined' && window.localStorage) {
-            window.localStorage.setItem(PROPERTY_STORAGE_KEY, JSON.stringify(live));
-          }
-        } catch {
-          // ignore storage quota errors
-        }
-        return live;
+      const liveProperties = await propertyApiService.getAll();
+      if (Array.isArray(liveProperties) && liveProperties.length > 0) {
+        setProperties(liveProperties);
+        setIsLiveBackend(true);
+        return liveProperties;
       }
-    } catch {
-      // Fallback to local
+    } catch (err) {
+      console.warn('Could not refresh from Supabase:', err?.message);
     } finally {
       setIsSyncing(false);
     }
-    const local = propertyRepository.getAll();
-    setProperties(local);
-    return local;
+    return properties;
+  }, [properties]);
+
+  const createProperty = useCallback(async (values) => {
+    setIsSyncing(true);
+    try {
+      const created = await propertyApiService.create(values);
+      setProperties((prev) => [created, ...prev.filter((p) => p.id !== created.id)]);
+      return created;
+    } finally {
+      setIsSyncing(false);
+    }
   }, []);
 
-  useEffect(() => {
-    const handleStorage = (event) => {
-      if (event.key !== PROPERTY_STORAGE_KEY && event.key !== null) return;
-      setProperties(propertyRepository.getAll());
-    };
-
-    window.addEventListener('storage', handleStorage);
-    return () => window.removeEventListener('storage', handleStorage);
+  const updateProperty = useCallback(async (id, values) => {
+    setIsSyncing(true);
+    try {
+      const updated = await propertyApiService.update(id, values);
+      setProperties((prev) => prev.map((p) => (p.id === id ? { ...p, ...updated } : p)));
+      return updated;
+    } finally {
+      setIsSyncing(false);
+    }
   }, []);
 
-  const createProperty = useCallback((values) => {
-    // 1. Optimistic / local create
-    const created = propertyRepository.create(values);
-    setProperties(propertyRepository.getAll());
-
-    // 2. Sync to Node / Supabase backend asynchronously
-    propertyApiService.create(created).catch((err) => {
-      console.warn('Failed to sync created property to backend:', err?.message);
-    });
-
-    return created;
-  }, []);
-
-  const updateProperty = useCallback((id, values) => {
-    // 1. Optimistic / local update
-    const updated = propertyRepository.update(id, values);
-    setProperties(propertyRepository.getAll());
-
-    // 2. Sync to Node / Supabase backend asynchronously
-    propertyApiService.update(id, updated).catch((err) => {
-      console.warn('Failed to sync updated property to backend:', err?.message);
-    });
-
-    return updated;
-  }, []);
-
-  const deleteProperty = useCallback((id) => {
-    // 1. Optimistic / local delete
-    const removed = propertyRepository.remove(id);
-    setProperties(propertyRepository.getAll());
-
-    // 2. Sync to Node / Supabase backend asynchronously
-    propertyApiService.remove(id).catch((err) => {
-      console.warn('Failed to sync property deletion to backend:', err?.message);
-    });
-
-    return removed;
+  const deleteProperty = useCallback(async (id) => {
+    setIsSyncing(true);
+    try {
+      const removed = await propertyApiService.remove(id);
+      setProperties((prev) => prev.filter((p) => p.id !== id));
+      return removed;
+    } finally {
+      setIsSyncing(false);
+    }
   }, []);
 
   const resetProperties = useCallback(async () => {
     setIsSyncing(true);
-    const seeded = propertyRepository.reset();
-    setProperties(seeded);
-
     try {
       const liveSeeded = await propertyApiService.reset();
       if (Array.isArray(liveSeeded) && liveSeeded.length > 0) {
         setProperties(liveSeeded);
+        return liveSeeded;
       }
-    } catch (err) {
-      console.warn('Backend reset failed, reverted to local seeds:', err?.message);
     } finally {
       setIsSyncing(false);
     }
-
-    return seeded;
+    setProperties(seedProperties);
+    return seedProperties;
   }, []);
 
   const getById = useCallback(

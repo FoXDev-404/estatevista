@@ -15,7 +15,7 @@ export default function AdminPropertyCreate() {
   const handleSubmit = async (record) => {
     const payload = { ...record };
     delete payload.id; // The repository generates a stable unique ID.
-    const created = createProperty(payload);
+    const created = await createProperty(payload);
     addToast(`"${created.title}" was created and published to the marketplace.`, 'success');
     navigate('/admin/properties');
   };
