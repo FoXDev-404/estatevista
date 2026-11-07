@@ -25,7 +25,7 @@ export const seedProperties = [
       area: 2850,
       areaUnit: 'sqft',
     },
-    images: ['/images/property-1.jpg', '/images/property-2.jpg', '/images/property-3.jpg'],
+    images: ['https://qhwcvwbgkvjwbryelexf.supabase.co/storage/v1/object/public/property-images/property-1.jpg', 'https://qhwcvwbgkvjwbryelexf.supabase.co/storage/v1/object/public/property-images/property-2.jpg', 'https://qhwcvwbgkvjwbryelexf.supabase.co/storage/v1/object/public/property-images/property-3.jpg'],
     description:
       'A sea-facing residence shaped around long views and quiet materiality. Deep balconies, a private lift lobby and generous living spaces make this a rare full-floor home in one of Mumbai’s most considered addresses.',
     amenities: [
@@ -67,7 +67,7 @@ export const seedProperties = [
       area: 5200,
       areaUnit: 'sqft',
     },
-    images: ['/images/property-4.jpg', '/images/property-5.jpg', '/images/property-6.jpg'],
+    images: ['https://qhwcvwbgkvjwbryelexf.supabase.co/storage/v1/object/public/property-images/property-4.jpg', 'https://qhwcvwbgkvjwbryelexf.supabase.co/storage/v1/object/public/property-images/property-5.jpg', 'https://qhwcvwbgkvjwbryelexf.supabase.co/storage/v1/object/public/property-images/property-6.jpg'],
     description:
       'A private villa composed around a central courtyard, mature tropical planting and an easy indoor-outdoor rhythm. Five ensuite bedrooms open to gardens, while the pool terrace becomes the natural centre of the home.',
     amenities: [
@@ -109,7 +109,7 @@ export const seedProperties = [
       area: 3200,
       areaUnit: 'sqft',
     },
-    images: ['/images/property-7.jpg', '/images/property-8.jpg', '/images/property-9.jpg'],
+    images: ['https://qhwcvwbgkvjwbryelexf.supabase.co/storage/v1/object/public/property-images/property-7.jpg', 'https://qhwcvwbgkvjwbryelexf.supabase.co/storage/v1/object/public/property-images/property-8.jpg', 'https://qhwcvwbgkvjwbryelexf.supabase.co/storage/v1/object/public/property-images/property-9.jpg'],
     description:
       'A calm family home set behind a mature garden in one of Bengaluru’s leafiest neighbourhoods. Living spaces are oriented towards the morning sun, with a generous kitchen, a quiet study and a first-floor terrace among the old canopy.',
     amenities: [
@@ -151,7 +151,7 @@ export const seedProperties = [
       area: 2450,
       areaUnit: 'sqft',
     },
-    images: ['/images/property-10.jpg', '/images/property-11.jpg', '/images/property-12.jpg'],
+    images: ['https://qhwcvwbgkvjwbryelexf.supabase.co/storage/v1/object/public/property-images/property-10.jpg', 'https://qhwcvwbgkvjwbryelexf.supabase.co/storage/v1/object/public/property-images/property-11.jpg', 'https://qhwcvwbgkvjwbryelexf.supabase.co/storage/v1/object/public/property-images/property-12.jpg'],
     description:
       'A lateral penthouse with a wraparound terrace and long views across the treetops. Interiors are restrained and luminous, with a formal living room, a separate family room and three quietly positioned bedrooms.',
     amenities: [
@@ -193,7 +193,7 @@ export const seedProperties = [
       area: 1800,
       areaUnit: 'sqft',
     },
-    images: ['/images/property-13.jpg', '/images/property-14.jpg', '/images/property-15.jpg'],
+    images: ['https://qhwcvwbgkvjwbryelexf.supabase.co/storage/v1/object/public/property-images/property-13.jpg', 'https://qhwcvwbgkvjwbryelexf.supabase.co/storage/v1/object/public/property-images/property-14.jpg', 'https://qhwcvwbgkvjwbryelexf.supabase.co/storage/v1/object/public/property-images/property-15.jpg'],
     description:
       'A beautifully proportioned apartment a short walk from the Bandra seafront. Large windows bring in sea light, while a neutral palette and generous storage make the home immediately liveable.',
     amenities: [
@@ -235,7 +235,7 @@ export const seedProperties = [
       area: 4100,
       areaUnit: 'sqft',
     },
-    images: ['/images/property-16.jpg', '/images/property-17.jpg', '/images/property-18.jpg'],
+    images: ['https://qhwcvwbgkvjwbryelexf.supabase.co/storage/v1/object/public/property-images/property-16.jpg', 'https://qhwcvwbgkvjwbryelexf.supabase.co/storage/v1/object/public/property-images/property-17.jpg', 'https://qhwcvwbgkvjwbryelexf.supabase.co/storage/v1/object/public/property-images/property-18.jpg'],
     description:
       'A contemporary interpretation of the Jaipur courtyard home, built around a central open-to-sky court and shaded verandahs. Warm stone, lime plaster and deep openings keep the house cool and grounded through the seasons.',
     amenities: [
@@ -277,7 +277,7 @@ export const seedProperties = [
       area: 2100,
       areaUnit: 'sqft',
     },
-    images: ['/images/property-19.jpg', '/images/property-20.jpg', '/images/property-21.jpg'],
+    images: ['https://qhwcvwbgkvjwbryelexf.supabase.co/storage/v1/object/public/property-images/property-19.jpg', 'https://qhwcvwbgkvjwbryelexf.supabase.co/storage/v1/object/public/property-images/property-20.jpg', 'https://qhwcvwbgkvjwbryelexf.supabase.co/storage/v1/object/public/property-images/property-21.jpg'],
     description:
       'A duplex apartment with double-height living spaces and a private roof terrace. The layout balances open entertaining areas with quieter bedroom wings, all within walking distance of Koregaon Park’s cafés and gardens.',
     amenities: [
@@ -319,7 +319,7 @@ export const seedProperties = [
       area: 7200,
       areaUnit: 'sqft',
     },
-    images: ['/images/property-22.jpg', '/images/property-23.jpg', '/images/property-24.jpg'],
+    images: ['https://qhwcvwbgkvjwbryelexf.supabase.co/storage/v1/object/public/property-images/property-22.jpg', 'https://qhwcvwbgkvjwbryelexf.supabase.co/storage/v1/object/public/property-images/property-23.jpg', 'https://qhwcvwbgkvjwbryelexf.supabase.co/storage/v1/object/public/property-images/property-24.jpg'],
     description:
       'An expansive estate arranged around lake views, mature gardens and a series of shaded terraces. The main residence and guest pavilion offer a rare combination of privacy, scale and connection to the landscape.',
     amenities: [
@@ -361,7 +361,7 @@ export const seedProperties = [
       area: 6000,
       areaUnit: 'sqft',
     },
-    images: ['/images/property-9.jpg', '/images/property-10.jpg', '/images/property-11.jpg'],
+    images: ['https://qhwcvwbgkvjwbryelexf.supabase.co/storage/v1/object/public/property-images/property-9.jpg', 'https://qhwcvwbgkvjwbryelexf.supabase.co/storage/v1/object/public/property-images/property-10.jpg', 'https://qhwcvwbgkvjwbryelexf.supabase.co/storage/v1/object/public/property-images/property-11.jpg'],
     description:
       'A low-slung farmhouse set within mature gardens, with deep verandahs and a generous lawn. This residence offers a sense of privacy and a timeless family layout in a characterful setting.',
     amenities: [
@@ -397,7 +397,7 @@ export const seedProperties = [
       area: 3800,
       areaUnit: 'sqft',
     },
-    images: ['/images/property-14.jpg', '/images/property-15.jpg', '/images/property-16.jpg'],
+    images: ['https://qhwcvwbgkvjwbryelexf.supabase.co/storage/v1/object/public/property-images/property-14.jpg', 'https://qhwcvwbgkvjwbryelexf.supabase.co/storage/v1/object/public/property-images/property-15.jpg', 'https://qhwcvwbgkvjwbryelexf.supabase.co/storage/v1/object/public/property-images/property-16.jpg'],
     description:
       'A waterfront villa with wide backwater views, a private jetty and a shaded pool deck. The current status reflects a well-loved home with an easy indoor-outdoor lifestyle and exceptional long-range views.',
     amenities: [
@@ -511,7 +511,7 @@ export const seedProperties = [
       area: 3600,
       areaUnit: 'sqft',
     },
-    images: ['/images/property-3.jpg', '/images/property-5.jpg', '/images/property-8.jpg'],
+    images: ['https://qhwcvwbgkvjwbryelexf.supabase.co/storage/v1/object/public/property-images/property-3.jpg', 'https://qhwcvwbgkvjwbryelexf.supabase.co/storage/v1/object/public/property-images/property-5.jpg', 'https://qhwcvwbgkvjwbryelexf.supabase.co/storage/v1/object/public/property-images/property-8.jpg'],
     description:
       'A classic city residence with high ceilings, deep verandahs and a private garden. This home captures the feeling of a quiet city address, while still offering space, light and room to grow.',
     amenities: [
@@ -547,7 +547,7 @@ export const seedProperties = [
       area: 2400,
       areaUnit: 'sqft',
     },
-    images: ['/images/property-4.jpg', '/images/property-6.jpg', '/images/property-12.jpg'],
+    images: ['https://qhwcvwbgkvjwbryelexf.supabase.co/storage/v1/object/public/property-images/property-4.jpg', 'https://qhwcvwbgkvjwbryelexf.supabase.co/storage/v1/object/public/property-images/property-6.jpg', 'https://qhwcvwbgkvjwbryelexf.supabase.co/storage/v1/object/public/property-images/property-12.jpg'],
     description:
       'A weekend retreat with valley views, a shaded deck and a small garden. Interiors are warm and uncomplicated, designed for easy gatherings and long, slow mornings away from the city.',
     amenities: [
@@ -583,7 +583,7 @@ export const seedProperties = [
       area: 1950,
       areaUnit: 'sqft',
     },
-    images: ['/images/property-1.jpg', '/images/property-13.jpg', '/images/property-17.jpg'],
+    images: ['https://qhwcvwbgkvjwbryelexf.supabase.co/storage/v1/object/public/property-images/property-1.jpg', 'https://qhwcvwbgkvjwbryelexf.supabase.co/storage/v1/object/public/property-images/property-13.jpg', 'https://qhwcvwbgkvjwbryelexf.supabase.co/storage/v1/object/public/property-images/property-17.jpg'],
     description:
       'A polished, move-in-ready apartment with a wide balcony and open views. The layout is efficient and bright, with a well-appointed kitchen and generous built-in storage throughout.',
     amenities: [

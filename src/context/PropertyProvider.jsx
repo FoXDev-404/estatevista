@@ -27,6 +27,13 @@ export default function PropertyProvider({ children }) {
         if (isMounted && Array.isArray(liveProperties) && liveProperties.length > 0) {
           setProperties(liveProperties);
           setIsLiveBackend(true);
+          try {
+            if (typeof window !== 'undefined' && window.localStorage) {
+              window.localStorage.setItem(PROPERTY_STORAGE_KEY, JSON.stringify(liveProperties));
+            }
+          } catch {
+            // ignore storage quota errors
+          }
         }
       } catch (err) {
         console.debug('Using local repository cache:', err?.message);
@@ -48,6 +55,13 @@ export default function PropertyProvider({ children }) {
       const live = await propertyApiService.getAll();
       if (Array.isArray(live) && live.length > 0) {
         setProperties(live);
+        try {
+          if (typeof window !== 'undefined' && window.localStorage) {
+            window.localStorage.setItem(PROPERTY_STORAGE_KEY, JSON.stringify(live));
+          }
+        } catch {
+          // ignore storage quota errors
+        }
         return live;
       }
     } catch {

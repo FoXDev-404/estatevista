@@ -3,8 +3,10 @@ import {
   LoaderCircle,
   Save,
   Sparkles,
+  Upload,
 } from 'lucide-react';
 import FormField from '../common/FormField';
+import { uploadImageApi } from '../../services/propertyApiService';
 import {
   emptyPropertyFormValues,
   propertyToFormValues,
@@ -68,8 +70,48 @@ export default function AdminPropertyForm({
   const [errors, setErrors] = useState({});
   const [formError, setFormError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState('');
 
   const isDirty = JSON.stringify(values) !== JSON.stringify(initialValues);
+
+  const handleImageUpload = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      setUploadError('Please select a valid image file (JPEG, PNG, WebP, etc.).');
+      event.target.value = '';
+      return;
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      setUploadError('Image exceeds the 10MB limit.');
+      event.target.value = '';
+      return;
+    }
+
+    setIsUploading(true);
+    setUploadError('');
+
+    try {
+      const result = await uploadImageApi(file);
+      if (result?.url) {
+        setValues((current) => ({
+          ...current,
+          images: current.images?.trim()
+            ? `${current.images.trim()}\n${result.url}`
+            : result.url,
+        }));
+        clearError('images');
+      }
+    } catch (err) {
+      setUploadError(err.message || 'Image upload failed. Ensure server and storage are running.');
+    } finally {
+      setIsUploading(false);
+      event.target.value = '';
+    }
+  };
 
   useEffect(() => {
     if (!isDirty) return undefined;
@@ -430,9 +472,39 @@ export default function AdminPropertyForm({
             onChange={updateField('images')}
             error={errors.images}
             className="admin-form-grid__full"
-            hint="One image per line. Example: /images/property-1.jpg"
-            placeholder="/images/property-1.jpg&#10;/images/property-2.jpg"
+            hint="One image per line. Use Supabase cloud URLs, Unsplash links, or upload directly below."
+            placeholder="https://qhwcvwbgkvjwbryelexf.supabase.co/storage/v1/object/public/property-images/...&#10;https://images.unsplash.com/..."
           />
+          <div className="admin-form-grid__full admin-form-upload" style={{ marginTop: '-0.25rem', marginBottom: '0.5rem' }}>
+            <label
+              className="button button--secondary button--sm"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', cursor: isUploading ? 'not-allowed' : 'pointer' }}
+            >
+              {isUploading ? (
+                <>
+                  <LoaderCircle className="animate-spin" size={16} />
+                  <span>Uploading to Supabase Storage...</span>
+                </>
+              ) : (
+                <>
+                  <Upload size={16} />
+                  <span>Upload photo to Supabase</span>
+                </>
+              )}
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleImageUpload}
+                disabled={isUploading}
+                style={{ display: 'none' }}
+              />
+            </label>
+            {uploadError && (
+              <p className="admin-form__field-error" style={{ marginTop: '0.5rem' }}>
+                {uploadError}
+              </p>
+            )}
+          </div>
         </div>
       </section>
 

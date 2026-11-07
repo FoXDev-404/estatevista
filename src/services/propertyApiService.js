@@ -208,6 +208,34 @@ export async function submitEnquiryApi(payload) {
   }
 }
 
+/**
+ * Upload an image file directly to Supabase Storage via the Node API.
+ */
+export async function uploadImageApi(file) {
+  const base64Data = await new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+
+  const res = await fetch(`${API_BASE}/upload`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      filename: file.name,
+      data: base64Data,
+    }),
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || 'Failed to upload image.');
+  }
+
+  return await res.json();
+}
+
 const propertyApiService = {
   checkApiHealth,
   getAll: getAllProperties,
@@ -218,6 +246,7 @@ const propertyApiService = {
   delete: deletePropertyApi,
   reset: resetPropertiesApi,
   submitEnquiry: submitEnquiryApi,
+  uploadImage: uploadImageApi,
 };
 
 export default propertyApiService;

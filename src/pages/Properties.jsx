@@ -155,7 +155,7 @@ export default function Properties() {
         breadcrumbs={[{ label: 'Home', to: '/' }, { label: 'Properties' }]}
         aside={
           <div className="collection-count">
-            <span className="collection-count__number">{availableCount}</span>
+            <span className="collection-count__number">{availableCount}</span>{' '}
             <span className="collection-count__label">
               available {availableCount === 1 ? 'property' : 'properties'}
             </span>
