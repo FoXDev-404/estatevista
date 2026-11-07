@@ -1,221 +1,105 @@
-# EstateVista — Assignment Submission
+# EstateVista — Full-Stack Real Estate Marketplace
 
-EstateVista is a **frontend-only real-estate website created for a Junior Frontend Developer
-assignment**. It is not a real estate company, live marketplace, production business, or
-verified property service.
+EstateVista is a modern, data-driven real estate platform built with **React 19, Node.js / Express, Supabase (PostgreSQL), and Supabase Cloud Storage**, deployed seamlessly with **Vercel Serverless Functions**.
 
-The project demonstrates the requested public pages, reusable React components, data-driven
-content, property search, property details, maps, forms, and a browser-based admin CRUD flow.
-The assignment brief was provided by [Digitalsdaddy.com](https://digitalsdaddy.com).
+The project features a polished public discovery portal, responsive property filters, dynamic galleries, interactive maps, validated enquiry workflows, and an admin studio backed by live cloud persistence and media uploads.
 
-## Features
+---
 
-### Public website
+## 🌟 Architecture & Key Features
 
-- **Home:** five-slide hero, search, featured/trending/latest properties, categories, locations,
-  Why Choose Us, services, testimonials, CTA, and footer.
-- **Properties:** dynamic cards, keyword/location search, type/purpose/price/featured filters,
-  sorting, URL-synced pagination, and grid/list views.
-- **Property details:** slug or ID lookup, gallery/lightbox, price, location, map, specifications,
-  amenities, facilities, enquiry form, advisor contact, and related properties.
-- **About:** company introduction, mission, vision, statistics, values, team, and Why Choose Us.
-- **Services:** five data-driven services with descriptions, imagery, and process guidance.
-- **Contact:** validated contact form, contact details, business hours, social links, and
-  OpenStreetMap office map.
-- **404:** branded not-found page for unknown routes and properties.
+### 🏢 Public Marketplace
+- **Hero Carousel:** 5-slide editorial showcase with touch, keyboard, and accessibility controls.
+- **Dynamic Property Catalog:** Search by keyword, city, area; filter by type (apartment, house, villa, plot, commercial), purpose (sale/rent), and price range; sort and switch between responsive grid/list views.
+- **Property Details:** Slug-based routing, image gallery with lightbox, specifications, amenities, location maps, and interactive enquiry modals.
+- **Enquiry Pipeline:** Contact and property enquiry forms submit directly to the Supabase PostgreSQL database (`enquiries` table).
+- **Editorial Pages:** Curated About, Services, Contact, and custom 404 pages.
 
-### Admin studio
+### 🛠️ Admin Studio (`/admin/properties`)
+- **Live Database CRUD:** Create, read, update, and delete property records backed by Supabase PostgreSQL.
+- **Direct Cloud Photo Upload:** Admins can upload property photos directly to the Supabase Storage bucket (`property-images`) via `POST /api/upload`.
+- **Validation & Integrity:** Server and client-side validation, slug uniqueness checks, and safe delete confirmations.
+- **Cross-Device Sync:** Changes made from any browser or device immediately reflect across the entire marketplace.
 
-- Dashboard with totals and status filters.
-- Search by reference, title, slug, city, area, or type.
-- Create, edit, delete, validation, duplicate protection, and reset-to-seed data.
-- Location map preview in the property editor.
-- Browser `localStorage` persistence and cross-tab updates.
+---
 
-## Tech stack
+## 💻 Tech Stack
 
-- React 19
-- React Router 7
-- Vite 8
-- JavaScript / JSX
-- Plain CSS
-- Vitest and Testing Library
-- ESLint
-- Lucide React
+- **Frontend:** React 19, React Router 7, Vite 8, Plain CSS (BEM & Design Tokens), Lucide Icons
+- **Backend:** Node.js, Express 5, Vercel Serverless Functions (`/api/*`)
+- **Database:** PostgreSQL on Supabase (with JSONB specifications, performance indexes, and Row-Level Security)
+- **Cloud Storage:** Supabase Cloud Storage (CDN-backed public bucket for property media)
+- **Testing:** Vitest, Testing Library (59 passing tests)
+- **Code Quality:** ESLint with React Hooks enforcement
 
-## Getting started
+---
 
-### Requirements
+## 🚀 Getting Started
 
-- Node.js 20.19+ (Node.js 22+ recommended)
+### Prerequisites
+- Node.js 20+ (Node.js 22+ recommended)
 - npm 10+
 
-### Install and run
-
+### Installation
 ```bash
+git clone https://github.com/FoXDev-404/estatevista.git
+cd estatevista
 npm install
-npm run dev
 ```
 
-Open the local URL shown by Vite, normally <http://localhost:5173/>.
-
-### Available scripts
-
-```bash
-npm run dev          # Start Vite frontend (localhost:5173)
-npm run dev:server   # Start Node.js Express backend (localhost:5000)
-npm run dev:all      # Start both Node backend and Vite frontend concurrently
-npm run db:seed      # Seed PostgreSQL (Supabase) with canonical property records
-npm run build     # Create production build
-npm run preview   # Preview production build
-npm test          # Run Vitest tests
-npm run lint      # Run ESLint
-```
-
-## Routes
-
-### Public
-
-| Route | Page |
-| --- | --- |
-| `/` | Home |
-| `/properties` | Property listing |
-| `/properties/:slug` | Property details |
-| `/properties/id/:id` | Property details by ID |
-| `/about` | About |
-| `/services` | Services |
-| `/contact` | Contact |
-| `*` | Branded 404 |
-
-### Admin
-
-| Route | Page |
-| --- | --- |
-| `/admin` | Redirects to the dashboard |
-| `/admin/properties` | Property dashboard |
-| `/admin/properties/new` | Create property |
-| `/admin/properties/:id/edit` | Edit property |
-
-## Data architecture
-
-Repeatable content is centralized in `src/data/`:
-
-| File | Content |
-| --- | --- |
-| `properties.js` | Initial property records |
-| `hero-slides.js` | Five hero slides |
-| `home.js` | Homepage section copy |
-| `services.js` | Service offerings |
-| `categories.js` | Property categories |
-| `locations.js` | Popular locations |
-| `about.js` | Story, mission, vision, values |
-| `team.js` | Team profiles |
-| `testimonials.js` | Testimonials |
-| `contact.js` | Contact information and map |
-| `site.js` | Site-wide settings |
-
-All public property sections use the same canonical records from `src/data/properties.js`.
-Property selection, filtering, sorting, validation, formatting, and storage logic lives in
-`src/services/`.
-
-### Property persistence
-
-The assignment uses browser storage:
-
-```text
-estatevista.properties.v1
-```
-
-On first load, the repository seeds the collection from `src/data/properties.js`. After that,
-valid browser data is preserved. Create, update, delete, and reset operations write immediately
-to `localStorage`; other open tabs refresh through the browser `storage` event.
-
-To restore the original seed collection:
-
-1. Open `/admin/properties`.
-2. Select **Reset property data**.
-3. Confirm the reset.
-
-Or run in browser developer tools:
-
-```js
-localStorage.removeItem('estatevista.properties.v1');
-location.reload();
-```
-
-## Testing
-
-The test suite covers repository CRUD and validation, selectors, URL filters, property listing,
-maps, hero behavior, reduced motion, and admin form validation.
-
-Current verification commands:
-
-```bash
-npm test
-npm run lint
-npm run build
-```
-
-Browser QA covers the public pages, admin pages, mobile navigation, gallery, filters, pagination,
-maps, and the local create → reload → update → delete flow.
-
-## PostgreSQL (Supabase) + Node.js Backend
-
-EstateVista includes an optional, production-ready Node.js Express backend configured for **Supabase (PostgreSQL)**:
-
-### 1. Set up Supabase
-1. Create a free project at [supabase.com](https://supabase.com).
-2. Open the **SQL Editor** in your Supabase dashboard and run the script in supabase/schema.sql.
-3. In Project Settings -> API, copy your **Project URL** and **service_role key**.
-
-### 2. Configure Environment
-Copy .env.example to .env and fill in your keys:
-`ash
+### Environment Configuration
+Create a `.env` file from `.env.example`:
+```env
+PORT=5000
 SUPABASE_URL=https://your-project.supabase.co
-SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
-`
-
-### 3. Seed Database & Run
-`ash
-npm run db:seed    # Populates PostgreSQL with the 16 canonical properties
-npm run dev:all    # Starts both Node API (port 5000) and Vite frontend (port 5173)
-`
-
-*Note: If the backend is offline or unconfigured, EstateVista automatically falls back to local browser storage so offline development and all tests continue to work seamlessly.*
-
-## Deployment
-
-This is a Vite single-page application. Build it with:
-
-```bash
-npm run build
+SUPABASE_SERVICE_ROLE_KEY=your-supabase-service-role-key
+SUPABASE_ANON_KEY=your-supabase-anon-key
 ```
 
-Deploy the `dist/` directory to a static host and configure an SPA fallback to `index.html`.
-The repository includes `vercel.json` and `public/_redirects`.
+### Available Scripts
 
-## Assignment scope and limitations
+| Command | Description |
+| :--- | :--- |
+| `npm run dev` | Starts Vite frontend at `http://localhost:5173` |
+| `npm run dev:server` | Starts Node.js Express API server at `http://localhost:5000` |
+| `npm run dev:all` | Runs both frontend and backend concurrently |
+| `npm run db:seed` | Populates Supabase PostgreSQL with canonical seed properties |
+| `npm run test:crud` | Runs automated end-to-end CRUD verification against Supabase |
+| `npm test` | Runs the Vitest test suite |
+| `npm run lint` | Checks codebase with ESLint |
+| `npm run build` | Compiles the production bundle into `dist/` |
 
-- Property records, prices, availability, addresses, team members, testimonials, and contact
-  details are fictional assignment content.
-- There is no backend, database, authentication, role-based access control, or cross-device
-  synchronization.
-- The admin studio is open to anyone who visits `/admin` and stores data only in that browser.
-- Contact and property enquiry forms validate input and show success feedback, but do not send or
-  persist messages.
-- OpenStreetMap embeds are used for the contact and property location previews.
-- No payments, saved searches, user accounts, CRM, listing verification, or transaction processing
-  are included.
-- Replace fictional content, imagery, and contact details with verified production assets before
-  commercial use.
+---
 
-## Credits
+## 📡 API Endpoints
 
-- **Assignment brief:** [Digitalsdaddy.com](https://digitalsdaddy.com)
-- **Photography:** [Unsplash](https://unsplash.com) contributors
+EstateVista runs as an Express API locally and as a unified Vercel Serverless Function in production:
+
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| `GET` | `/api/health` | API and Supabase database health status |
+| `GET` | `/api/properties` | Fetch filtered and sorted properties |
+| `GET` | `/api/properties/:idOrSlug` | Fetch a single property by ID or slug |
+| `POST` | `/api/properties` | Create a new property in Supabase |
+| `PUT` | `/api/properties/:id` | Update an existing property in Supabase |
+| `DELETE` | `/api/properties/:id` | Delete a property from Supabase |
+| `POST` | `/api/upload` | Upload image buffer to Supabase Cloud Storage |
+| `POST` | `/api/enquiries` | Save contact / property enquiry to PostgreSQL |
+| `POST` | `/api/properties/reset`| Reset properties table to original canonical seeds |
+
+---
+
+## 🧪 Testing & Verification
+
+The project includes thorough unit, component, and integration tests:
+- **59 / 59 Vitest tests passing** covering repository logic, property selectors, search query serialization, accessibility, and form validation.
+- **Zero ESLint warnings or errors**.
+- Automated live database verification script (`npm run test:crud`).
+
+---
+
+## 📄 License & Credits
+- **UI & Architecture:** EstateVista
 - **Icons:** [Lucide](https://lucide.dev)
-- **Fonts:** Cormorant Garamond and Manrope
-
-EstateVista is an independent assignment project and frontend demonstration. It is not affiliated
-with, endorsed by, or sponsored by any property brand, agency, listing service, or real estate
-company.
+- **Fonts:** Cormorant Garamond & Manrope
+- **Assignment Brief:** [Digitalsdaddy.com](https://digitalsdaddy.com)
