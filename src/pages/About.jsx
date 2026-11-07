@@ -25,6 +25,8 @@ const valueIcons = {
   Sparkles,
 };
 
+const STORAGE_BASE = 'https://qhwcvwbgkvjwbryelexf.supabase.co/storage/v1/object/public/property-images';
+
 export default function About() {
   const { properties } = useProperties();
   const available = getAvailableProperties(properties);
@@ -43,7 +45,7 @@ export default function About() {
       <PageMeta
         title="About"
         description="EstateVista is a considered real estate marketplace built around clarity, editorial presentation and a more human property search."
-        image="/images/about-1.jpg"
+        image={`${STORAGE_BASE}/about-1.jpg`}
       />
 
       <PageHeader
@@ -51,7 +53,7 @@ export default function About() {
         title={aboutContent.title}
         description={aboutContent.intro}
         breadcrumbs={[{ label: 'Home', to: '/' }, { label: 'About' }]}
-        image="/images/about-1.jpg"
+        image={`${STORAGE_BASE}/about-1.jpg`}
         imageAlt="A refined living space with warm materials and garden views"
         tone="dark"
         aside={
@@ -82,7 +84,7 @@ export default function About() {
           <div className="about-story__image-row">
             <div className="about-story__image about-story__image--wide">
               <SmartImage
-                src="/images/about-3.jpg"
+                src={`${STORAGE_BASE}/about-3.jpg`}
                 alt="Interior with natural light, timber and considered furnishings"
                 className="about-story__photo"
                 loading="lazy"
@@ -92,7 +94,7 @@ export default function About() {
             </div>
             <div className="about-story__image about-story__image--narrow">
               <SmartImage
-                src="/images/about-2.jpg"
+                src={`${STORAGE_BASE}/about-2.jpg`}
                 alt="A quiet architectural detail with warm stone and plants"
                 className="about-story__photo"
                 loading="lazy"

@@ -1,9 +1,11 @@
+const STORAGE_BASE = 'https://qhwcvwbgkvjwbryelexf.supabase.co/storage/v1/object/public/property-images';
+
 export const heroSlides = [
   {
     id: 'SLIDE-01',
     mediaType: 'image',
-    mediaSrc: '/images/hero-1.jpg',
-    poster: '/images/hero-1.jpg',
+    mediaSrc: `${STORAGE_BASE}/hero-1.jpg`,
+    poster: `${STORAGE_BASE}/hero-1.jpg`,
     alt: 'Contemporary residence with warm timber and glass façades at dusk',
     eyebrow: 'Worli · Mumbai',
     heading: 'Live where the city exhales.',
@@ -17,8 +19,8 @@ export const heroSlides = [
   {
     id: 'SLIDE-02',
     mediaType: 'image',
-    mediaSrc: '/images/hero-2.jpg',
-    poster: '/images/hero-2.jpg',
+    mediaSrc: `${STORAGE_BASE}/hero-2.jpg`,
+    poster: `${STORAGE_BASE}/hero-2.jpg`,
     alt: 'Sunlit living room framed by floor-to-ceiling windows',
     eyebrow: 'Assagao · Goa',
     heading: 'A quieter kind of luxury.',
@@ -32,8 +34,8 @@ export const heroSlides = [
   {
     id: 'SLIDE-03',
     mediaType: 'image',
-    mediaSrc: '/images/hero-3.jpg',
-    poster: '/images/hero-3.jpg',
+    mediaSrc: `${STORAGE_BASE}/hero-3.jpg`,
+    poster: `${STORAGE_BASE}/hero-3.jpg`,
     alt: 'Modern villa with a pool and sculptural architecture',
     eyebrow: 'Golf Links · New Delhi',
     heading: 'An address with a point of view.',
@@ -47,8 +49,8 @@ export const heroSlides = [
   {
     id: 'SLIDE-04',
     mediaType: 'image',
-    mediaSrc: '/images/hero-4.jpg',
-    poster: '/images/hero-4.jpg',
+    mediaSrc: `${STORAGE_BASE}/hero-4.jpg`,
+    poster: `${STORAGE_BASE}/hero-4.jpg`,
     alt: 'Serene interior with natural stone, timber and soft daylight',
     eyebrow: 'Sadashivanagar · Bengaluru',
     heading: 'Space to become yourself.',
@@ -62,8 +64,8 @@ export const heroSlides = [
   {
     id: 'SLIDE-05',
     mediaType: 'image',
-    mediaSrc: '/images/hero-5.jpg',
-    poster: '/images/hero-5.jpg',
+    mediaSrc: `${STORAGE_BASE}/hero-5.jpg`,
+    poster: `${STORAGE_BASE}/hero-5.jpg`,
     alt: 'Elegant residence with landscaped gardens and warm evening light',
     eyebrow: 'Across India',
     heading: 'Your next chapter begins here.',

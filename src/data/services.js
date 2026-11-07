@@ -1,3 +1,5 @@
+const STORAGE_BASE = 'https://qhwcvwbgkvjwbryelexf.supabase.co/storage/v1/object/public/property-images';
+
 export const services = [
   {
     id: 'SERVICE-01',
@@ -5,7 +7,7 @@ export const services = [
     shortDescription: 'A focused search, guided by what matters to you.',
     description:
       'From the first brief to the final handover, we help you evaluate neighbourhoods, compare properties and move forward with clarity. Our process is built around careful listening, honest advice and a shortlist worth your time.',
-    image: '/images/service-1.jpg',
+    image: `${STORAGE_BASE}/service-1.jpg`,
     icon: 'KeyRound',
     ctaLabel: 'Browse properties for sale',
     ctaTo: '/properties?purpose=sale',
@@ -16,7 +18,7 @@ export const services = [
     shortDescription: 'Position your property with intelligence and restraint.',
     description:
       'We shape a considered story around your property, advise on presentation and introduce it to the right audience. The result is a sale process that protects your time, your privacy and the value of your asset.',
-    image: '/images/service-2.jpg',
+    image: `${STORAGE_BASE}/service-2.jpg`,
     icon: 'TrendingUp',
     ctaLabel: 'Discuss selling your property',
     ctaTo: '/contact?subject=Property%20selling%20consultation',
@@ -27,7 +29,7 @@ export const services = [
     shortDescription: 'Homes and commercial spaces for a new chapter.',
     description:
       'Whether you are relocating, downsizing or expanding, we help match the right space to the life or business you are building. Shortlists are informed by location, lease terms, lifestyle needs and long-term fit.',
-    image: '/images/service-3.jpg',
+    image: `${STORAGE_BASE}/service-3.jpg`,
     icon: 'Key',
     ctaLabel: 'Explore rental properties',
     ctaTo: '/properties?purpose=rent',
@@ -38,7 +40,7 @@ export const services = [
     shortDescription: 'Independent perspective before a significant decision.',
     description:
       'A focused conversation for buyers, sellers and investors who want a second view. We bring structure to questions of value, timing, location and potential, without pressure or a predetermined outcome.',
-    image: '/images/service-4.jpg',
+    image: `${STORAGE_BASE}/service-4.jpg`,
     icon: 'MessagesSquare',
     ctaLabel: 'Book a consultation',
     ctaTo: '/contact?subject=Property%20consultation',
@@ -49,7 +51,7 @@ export const services = [
     shortDescription: 'Careful stewardship for the home you are not in.',
     description:
       'From tenant coordination to routine upkeep, property management is about consistent attention and clear communication. We help protect the condition and performance of your property over time.',
-    image: '/images/service-5.jpg',
+    image: `${STORAGE_BASE}/service-5.jpg`,
     icon: 'ClipboardCheck',
     ctaLabel: 'Enquire about management',
     ctaTo: '/contact?subject=Property%20management',

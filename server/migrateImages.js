@@ -137,3 +137,4 @@ migrateImages().catch((err) => {
   console.error('\n❌ Unexpected error during migration:', err);
   process.exit(1);
 });
+

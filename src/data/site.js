@@ -10,7 +10,8 @@ const site = {
     label: 'Speak with an advisor',
     href: '/contact',
   },
-  heroFallbackImage: '/images/hero-1.jpg',
+  heroFallbackImage:
+    'https://qhwcvwbgkvjwbryelexf.supabase.co/storage/v1/object/public/property-images/hero-1.jpg',
   notice:
     'Discover premium homes, investment opportunities and thoughtfully curated spaces across India.',
 };

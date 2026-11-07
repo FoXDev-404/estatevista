@@ -8,13 +8,15 @@ import ServiceCard from '../components/common/ServiceCard';
 import services, { serviceProcess } from '../data/services';
 import contactDetails from '../data/contact';
 
+const STORAGE_BASE = 'https://qhwcvwbgkvjwbryelexf.supabase.co/storage/v1/object/public/property-images';
+
 export default function Services() {
   return (
     <>
       <PageMeta
         title="Services"
         description="Buying, selling, renting, consultation and property management services from EstateVista."
-        image="/images/service-4.jpg"
+        image={`${STORAGE_BASE}/service-4.jpg`}
       />
 
       <PageHeader
@@ -22,7 +24,7 @@ export default function Services() {
         title="A thoughtful partner at every stage."
         description="From the first search to the ongoing care of a property, EstateVista is built around clear advice, considered presentation and a human process."
         breadcrumbs={[{ label: 'Home', to: '/' }, { label: 'Services' }]}
-        image="/images/service-4.jpg"
+        image={`${STORAGE_BASE}/service-4.jpg`}
         imageAlt="An advisor in conversation with clients in a bright studio"
         tone="dark"
         aside={

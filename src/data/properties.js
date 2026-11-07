@@ -433,7 +433,11 @@ export const seedProperties = [
       area: 4800,
       areaUnit: 'sqft',
     },
-    images: ['/images/plot-1.jpg', '/images/plot-2.jpg', '/images/plot-3.jpg'],
+    images: [
+      'https://qhwcvwbgkvjwbryelexf.supabase.co/storage/v1/object/public/property-images/plot-1.jpg',
+      'https://qhwcvwbgkvjwbryelexf.supabase.co/storage/v1/object/public/property-images/plot-2.jpg',
+      'https://qhwcvwbgkvjwbryelexf.supabase.co/storage/v1/object/public/property-images/plot-3.jpg',
+    ],
     description:
       'A generous corner plot in a low-density gated layout, bordered by established trees. Services are brought to the boundary, offering a clear canvas for a private residence designed around the garden.',
     amenities: [
@@ -469,7 +473,11 @@ export const seedProperties = [
       area: 3200,
       areaUnit: 'sqft',
     },
-    images: ['/images/office-1.jpg', '/images/office-2.jpg', '/images/office-3.jpg'],
+    images: [
+      'https://qhwcvwbgkvjwbryelexf.supabase.co/storage/v1/object/public/property-images/office-1.jpg',
+      'https://qhwcvwbgkvjwbryelexf.supabase.co/storage/v1/object/public/property-images/office-2.jpg',
+      'https://qhwcvwbgkvjwbryelexf.supabase.co/storage/v1/object/public/property-images/office-3.jpg',
+    ],
     description:
       'A full-floor commercial suite in a well-maintained building on one of Indiranagar’s most connected streets. The space offers a clear, column-free floorplate, a reception area and good natural light on three sides.',
     amenities: [
@@ -625,7 +633,11 @@ export const seedProperties = [
       area: 7500,
       areaUnit: 'sqft',
     },
-    images: ['/images/plot-2.jpg', '/images/plot-3.jpg', '/images/plot-1.jpg'],
+    images: [
+      'https://qhwcvwbgkvjwbryelexf.supabase.co/storage/v1/object/public/property-images/plot-2.jpg',
+      'https://qhwcvwbgkvjwbryelexf.supabase.co/storage/v1/object/public/property-images/plot-3.jpg',
+      'https://qhwcvwbgkvjwbryelexf.supabase.co/storage/v1/object/public/property-images/plot-1.jpg',
+    ],
     description:
       'A quiet, tree-lined plot a short drive from Kihim beach, suitable for a private coastal home. The land is level, with mature boundary planting and access from a paved internal road.',
     amenities: [
