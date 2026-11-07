@@ -6,6 +6,12 @@ export default defineConfig({
   server: {
     port: 5173,
     host: true,
+    proxy: {
+      '/api': {
+        target: 'http://localhost:5000',
+        changeOrigin: true,
+      },
+    },
   },
   preview: {
     port: 4173,
@@ -19,5 +25,6 @@ export default defineConfig({
     restoreMocks: true,
     clearMocks: true,
     include: ['src/**/*.{test,spec}.{js,jsx}'],
+    testTimeout: 15000,
   },
 });

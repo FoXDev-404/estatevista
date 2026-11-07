@@ -62,7 +62,10 @@ Open the local URL shown by Vite, normally <http://localhost:5173/>.
 ### Available scripts
 
 ```bash
-npm run dev       # Start development server
+npm run dev          # Start Vite frontend (localhost:5173)
+npm run dev:server   # Start Node.js Express backend (localhost:5000)
+npm run dev:all      # Start both Node backend and Vite frontend concurrently
+npm run db:seed      # Seed PostgreSQL (Supabase) with canonical property records
 npm run build     # Create production build
 npm run preview   # Preview production build
 npm test          # Run Vitest tests
@@ -155,6 +158,30 @@ npm run build
 
 Browser QA covers the public pages, admin pages, mobile navigation, gallery, filters, pagination,
 maps, and the local create → reload → update → delete flow.
+
+## PostgreSQL (Supabase) + Node.js Backend
+
+EstateVista includes an optional, production-ready Node.js Express backend configured for **Supabase (PostgreSQL)**:
+
+### 1. Set up Supabase
+1. Create a free project at [supabase.com](https://supabase.com).
+2. Open the **SQL Editor** in your Supabase dashboard and run the script in supabase/schema.sql.
+3. In Project Settings -> API, copy your **Project URL** and **service_role key**.
+
+### 2. Configure Environment
+Copy .env.example to .env and fill in your keys:
+`ash
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+`
+
+### 3. Seed Database & Run
+`ash
+npm run db:seed    # Populates PostgreSQL with the 16 canonical properties
+npm run dev:all    # Starts both Node API (port 5000) and Vite frontend (port 5173)
+`
+
+*Note: If the backend is offline or unconfigured, EstateVista automatically falls back to local browser storage so offline development and all tests continue to work seamlessly.*
 
 ## Deployment
 

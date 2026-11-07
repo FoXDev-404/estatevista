@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
-import { ExternalLink, LayoutDashboard, LockKeyhole } from 'lucide-react';
+import { ExternalLink, LayoutDashboard } from 'lucide-react';
 import Logo from '../common/Logo';
 
 export default function AdminLayout() {
@@ -42,15 +42,6 @@ export default function AdminLayout() {
           </nav>
         </div>
       </header>
-
-      <div className="admin-local-banner">
-        <div className="container admin-local-banner__inner">
-          <LockKeyhole size={16} aria-hidden="true" />
-          <p>
-            This dashboard stores records in the browser with localStorage for quick testing and editing.
-          </p>
-        </div>
-      </div>
 
       <main id="main-content" className="admin-main" tabIndex="-1">
         <Outlet />

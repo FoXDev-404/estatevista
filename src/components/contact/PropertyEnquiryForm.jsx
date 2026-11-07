@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { CheckCircle2, Send } from 'lucide-react';
 import FormField from '../common/FormField';
+import { submitEnquiryApi } from '../../services/propertyApiService';
 
 const initialValues = { name: '', email: '', phone: '', message: '' };
 
@@ -32,6 +33,7 @@ export default function PropertyEnquiryForm({ property }) {
   const [values, setValues] = useState(initialValues);
   const [errors, setErrors] = useState({});
   const [hasSubmitted, setHasSubmitted] = useState(false);
+  const [submissionFeedback, setSubmissionFeedback] = useState(null);
 
   const updateField = (field) => (event) => {
     setValues((current) => ({ ...current, [field]: event.target.value }));
@@ -44,13 +46,28 @@ export default function PropertyEnquiryForm({ property }) {
     if (hasSubmitted) setHasSubmitted(false);
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
     const nextErrors = validate(values);
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) {
       setHasSubmitted(false);
       return;
+    }
+
+    try {
+      const result = await submitEnquiryApi({
+        ...values,
+        propertyId: property.id,
+        type: 'property',
+      });
+      setSubmissionFeedback(
+        result?.simulated
+          ? 'This enquiry has been validated locally. Connect your Supabase credentials in .env to persist directly to PostgreSQL.'
+          : `Thank you! Your enquiry for "${property.title}" has been saved into PostgreSQL.`
+      );
+    } catch {
+      setSubmissionFeedback('This enquiry was prepared locally.');
     }
 
     setHasSubmitted(true);
@@ -69,11 +86,8 @@ export default function PropertyEnquiryForm({ property }) {
         <div className="form-success" role="status">
           <CheckCircle2 size={20} aria-hidden="true" />
           <div>
-            <p className="form-success__title">Enquiry prepared</p>
-            <p>
-              This assignment form has validated your details locally. It has not been sent to a
-              live inbox or stored on a server.
-            </p>
+            <p className="form-success__title">Enquiry received</p>
+            <p>{submissionFeedback}</p>
           </div>
         </div>
       ) : null}

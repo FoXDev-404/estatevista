@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { CheckCircle2, Send } from 'lucide-react';
 import FormField from '../common/FormField';
+import { submitEnquiryApi } from '../../services/propertyApiService';
 
 const baseValues = {
   name: '',
@@ -49,6 +50,7 @@ export default function ContactForm() {
   }));
   const [errors, setErrors] = useState({});
   const [hasSubmitted, setHasSubmitted] = useState(false);
+  const [submissionFeedback, setSubmissionFeedback] = useState(null);
 
   const updateField = (field) => (event) => {
     setValues((current) => ({ ...current, [field]: event.target.value }));
@@ -61,7 +63,7 @@ export default function ContactForm() {
     if (hasSubmitted) setHasSubmitted(false);
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
     const nextErrors = validate(values);
     setErrors(nextErrors);
@@ -69,6 +71,17 @@ export default function ContactForm() {
     if (Object.keys(nextErrors).length > 0) {
       setHasSubmitted(false);
       return;
+    }
+
+    try {
+      const result = await submitEnquiryApi({ ...values, type: 'general' });
+      setSubmissionFeedback(
+        result?.simulated
+          ? 'This enquiry has been validated locally. Connect your Supabase credentials in .env to persist directly to PostgreSQL.'
+          : 'Thank you! Your message has been received and saved into PostgreSQL.'
+      );
+    } catch {
+      setSubmissionFeedback('This enquiry was prepared locally.');
     }
 
     setHasSubmitted(true);
@@ -81,11 +94,8 @@ export default function ContactForm() {
         <div className="form-success" role="status">
           <CheckCircle2 size={20} aria-hidden="true" />
           <div>
-            <p className="form-success__title">Message prepared</p>
-            <p>
-              This assignment form has validated your details locally. It has not been sent to a
-              live inbox or stored on a server.
-            </p>
+            <p className="form-success__title">Message received</p>
+            <p>{submissionFeedback}</p>
           </div>
         </div>
       ) : null}
