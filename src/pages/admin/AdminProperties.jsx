@@ -233,8 +233,8 @@ export default function AdminProperties() {
         </div>
 
         <p className="admin-page__note">
-          Changes are stored only in this browser. Refreshing preserves saved data; clearing site
-          data or using another browser does not synchronise records.
+          Changes are saved live to Supabase PostgreSQL and sync instantly across every browser,
+          device and public page.
         </p>
       </Container>
 
@@ -250,7 +250,7 @@ export default function AdminProperties() {
         open={resetOpen}
         onClose={isResetting ? () => {} : () => setResetOpen(false)}
         title="Reset property data?"
-        description="This replaces all properties in local browser storage with the original collection."
+        description="This replaces every property in Supabase with the original canonical collection."
         footer={
           <>
             <button
@@ -279,8 +279,8 @@ export default function AdminProperties() {
       >
         <div className="reset-confirmation">
           <p>
-            Any properties you have created, edited or deleted in this browser will be replaced by
-            the original records. This cannot be undone.
+            Any properties created, edited or deleted from the dashboard will be replaced by the
+            original records. This cannot be undone.
           </p>
           <p>Public pages will update immediately after the reset.</p>
         </div>

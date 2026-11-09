@@ -24,7 +24,7 @@ export default function AdminPropertyCreate() {
     <>
       <PageMeta
         title="Add a property"
-        description="Create a new property record in the EstateVista local property studio."
+        description="Create a new property record in the EstateVista property studio."
         noIndex
       />
       <Container className="admin-page admin-form-page">

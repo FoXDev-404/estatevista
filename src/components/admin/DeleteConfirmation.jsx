@@ -7,7 +7,7 @@ export default function DeleteConfirmation({ open, property, onCancel, onConfirm
       open={open}
       onClose={isDeleting ? () => {} : onCancel}
       title="Delete this property?"
-      description="This removes the record from local browser storage and every public section that uses it."
+      description="This permanently removes the record from Supabase and every public section that displays it."
       footer={
         <>
           <button
