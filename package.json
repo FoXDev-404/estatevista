@@ -16,7 +16,6 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "db:migrate": "node server/migrate.js",
-    "db:migrate-images": "node server/migrateImages.js",
     "test:crud": "node scripts/testCrud.js"
   },
   "dependencies": {
