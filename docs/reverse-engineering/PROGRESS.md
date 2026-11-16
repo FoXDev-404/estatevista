@@ -134,5 +134,12 @@ Branch: `feat/r1-core-ops`. Work is tracked in `.superpowers/sdd/07-implementati
   - Verification: lint clean; client 107 tests / 17 files; server 150 tests / 17 files. Manual cycle covered a general contact inquiry and a property inquiry, both creating inquiries plus Website leads; inbox rows, type filter/search and open-lead detail (source/notes); duplicate replay `200 duplicate` with unchanged counts; invalid payload `422`; anonymous inbox `401`; anonymous `/admin/inquiries` redirect to login; and a Sales Agent with hidden nav, restricted route and API `403`. A submission that exceeded the 8-second client timeout completed on the server; retrying with the same key succeeded without a duplicate.
   - Known limitations: visit requests create no `visits` row; lead-creation failure is swallowed for the visitor and healed only on a key replay; public project pages are not added in R1; company resolution is environment-based and single-tenant; the inquiry inbox is read-only.
 
+## Phase 4 — Verify (checklist complete; branch review pending)
 
-## Phase 4 — Verify (pending)
+The full flow-by-flow verification map is in `08-release-1-verification.md`. It covers all
+Phase 1 documents, marks each R1 flow implemented/partial/deferred, cites its automated and
+manual evidence, and lists the known limitations carried into sign-off.
+
+- Verification baseline at `b13d18e`: `npm run lint` clean; client 107 tests / 17 files; server 150 tests / 17 files.
+- R1 implementation is complete across WP0–WP8; deferred modules are explicitly mapped to R2+ by the approved scope.
+- Remaining sign-off items: branch-level code review and the human merge/keep-branch decision.
