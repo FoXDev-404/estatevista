@@ -1,68 +1,74 @@
 import { Router } from 'express';
 import { supabase, isSupabaseConfigured } from '../supabaseClient.js';
+import { ApiError, asyncHandler, validationError } from '../lib/errors.js';
 
-const router = Router();
 const BUCKET_NAME = 'property-images';
+const MAX_BYTES = 10 * 1024 * 1024;
 
-// POST /api/upload - Upload an image to Supabase Storage
-router.post('/', async (req, res) => {
-  if (!isSupabaseConfigured || !supabase) {
-    return res.status(503).json({ error: 'Supabase storage is not configured' });
-  }
+export function createUploadRouter({ auth } = {}) {
+  const router = Router();
+  const manage = auth
+    ? [auth.requireAuth, auth.requirePermission('properties.manage'), auth.requireCsrf]
+    : [];
 
-  try {
-    const { filename, data } = req.body || {};
+  router.post(
+    '/',
+    ...manage,
+    asyncHandler(async (req, res) => {
+      if (!isSupabaseConfigured || !supabase) {
+        throw new ApiError(503, 'Supabase storage is not configured.');
+      }
 
-    if (!filename || !data) {
-      return res.status(400).json({ error: 'Filename and image data are required.' });
-    }
+      const { filename, data } = req.body || {};
+      const fields = {};
+      if (!filename) fields.filename = 'Choose a file to upload.';
+      if (!data) fields.data = 'The file data is missing.';
+      if (Object.keys(fields).length) throw validationError(fields);
 
-    // Parse base64 data URL
-    const matches = data.match(/^data:([a-zA-Z0-9/+-]+);base64,(.+)$/);
-    if (!matches) {
-      return res.status(400).json({ error: 'Invalid image format. Expected base64 data URL.' });
-    }
+      const matches = String(data).match(/^data:([a-zA-Z0-9/+-]+);base64,(.+)$/);
+      if (!matches) {
+        throw validationError({
+          data: 'Invalid image format. Upload a base64 data URL.',
+        });
+      }
 
-    const contentType = matches[1];
-    const base64Data = matches[2];
-    const buffer = Buffer.from(base64Data, 'base64');
+      const [, contentType, base64Data] = matches;
+      if (!contentType.startsWith('image/')) {
+        throw validationError({ data: 'Only image files can be uploaded.' });
+      }
 
-    // Limit to 10MB
-    if (buffer.length > 10 * 1024 * 1024) {
-      return res.status(400).json({ error: 'Image exceeds the 10MB size limit.' });
-    }
+      const buffer = Buffer.from(base64Data, 'base64');
+      if (buffer.length > MAX_BYTES) {
+        throw validationError({ data: 'Images must be 10MB or smaller.' });
+      }
 
-    // Generate unique safe file name
-    const ext = filename.split('.').pop().toLowerCase();
-    const cleanBase = filename.replace(/\.[^/.]+$/, '').toLowerCase().replace(/[^a-z0-9_-]/g, '-');
-    const storageFilename = `upload-${Date.now()}-${cleanBase}.${ext}`;
+      const extension = String(filename).split('.').pop()?.toLowerCase() || 'jpg';
+      const cleanBase = String(filename)
+        .replace(/\.[^/.]+$/, '')
+        .toLowerCase()
+        .replace(/[^a-z0-9_-]/g, '-')
+        .slice(0, 60);
+      const storageFilename = `upload-${Date.now()}-${cleanBase || 'image'}.${extension}`;
 
-    const { error: uploadError } = await supabase.storage
-      .from(BUCKET_NAME)
-      .upload(storageFilename, buffer, {
-        contentType,
-        upsert: true,
+      const { error } = await supabase.storage
+        .from(BUCKET_NAME)
+        .upload(storageFilename, buffer, { contentType, upsert: true });
+
+      if (error) throw new ApiError(500, error.message);
+
+      const { data: publicUrlData } = supabase.storage
+        .from(BUCKET_NAME)
+        .getPublicUrl(storageFilename);
+
+      return res.status(201).json({
+        success: true,
+        url: publicUrlData.publicUrl,
+        filename: storageFilename,
       });
+    }),
+  );
 
-    if (uploadError) {
-      console.error('Storage upload error:', uploadError);
-      return res.status(500).json({ error: uploadError.message });
-    }
+  return router;
+}
 
-    const { data: publicUrlData } = supabase.storage
-      .from(BUCKET_NAME)
-      .getPublicUrl(storageFilename);
-
-    res.status(201).json({
-      success: true,
-      url: publicUrlData.publicUrl,
-      filename: storageFilename,
-    });
-  } catch (err) {
-    console.error('Upload endpoint error:', err);
-    res.status(500).json({ error: 'Failed to process image upload.' });
-  }
-});
-
-export default router;
-
+export default createUploadRouter;

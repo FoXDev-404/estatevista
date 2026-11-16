@@ -1,81 +1,84 @@
 import { Router } from 'express';
 import { supabase, isSupabaseConfigured } from '../supabaseClient.js';
+import { ApiError, asyncHandler, validationError } from '../lib/errors.js';
 
-const router = Router();
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-// GET /api/enquiries - Retrieve all enquiries (for admin inspection)
-router.get('/', async (req, res) => {
-  if (!isSupabaseConfigured || !supabase) {
-    return res.status(503).json({ error: 'Supabase is not configured' });
-  }
+export function createEnquiriesRouter({ auth } = {}) {
+  const router = Router();
+  const view = auth ? [auth.requireAuth, auth.requirePermission('enquiries.view')] : [];
 
-  try {
-    const { data, error } = await supabase
-      .from('enquiries')
-      .select('*')
-      .order('created_at', { ascending: false });
+  // GET /api/enquiries — authenticated inbox for legacy website enquiries.
+  router.get(
+    '/',
+    ...view,
+    asyncHandler(async (_req, res) => {
+      if (!isSupabaseConfigured || !supabase) {
+        throw new ApiError(503, 'Supabase is not configured.');
+      }
 
-    if (error) {
-      console.error('Error fetching enquiries from Supabase:', error);
-      return res.status(500).json({ error: error.message });
-    }
+      const { data, error } = await supabase
+        .from('enquiries')
+        .select('*')
+        .order('created_at', { ascending: false });
 
-    res.json(data || []);
-  } catch (err) {
-    console.error('Unexpected error in GET /api/enquiries:', err);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
+      if (error) throw new ApiError(500, error.message);
+      return res.json(data || []);
+    }),
+  );
 
-// POST /api/enquiries - Submit contact or property enquiry
-router.post('/', async (req, res) => {
-  if (!isSupabaseConfigured || !supabase) {
-    return res.status(503).json({
-      error: 'Supabase is not configured',
-      fallback: true,
-    });
-  }
+  // POST /api/enquiries — public contact form.
+  router.post(
+    '/',
+    asyncHandler(async (req, res) => {
+      if (!isSupabaseConfigured || !supabase) {
+        return res.status(503).json({
+          error: 'Supabase is not configured',
+          fallback: true,
+        });
+      }
 
-  try {
-    const { name, email, phone, subject, message, propertyId, type } = req.body || {};
+      const { name, email, phone, subject, message, propertyId, type } = req.body || {};
+      const fields = {};
 
-    if (!name || !email || !message) {
-      return res.status(400).json({
-        error: 'Name, email, and message are required fields',
+      if (!name || !String(name).trim()) fields.name = 'Enter your name.';
+      if (!email || !String(email).trim()) fields.email = 'Enter your email address.';
+      else if (!EMAIL_PATTERN.test(String(email).trim())) {
+        fields.email = 'Enter a valid email address.';
+      }
+      if (!message || !String(message).trim()) fields.message = 'Enter a message.';
+
+      if (Object.keys(fields).length) {
+        throw validationError(fields, 'Please correct the highlighted fields.');
+      }
+
+      const newEnquiry = {
+        name: String(name).trim(),
+        email: String(email).trim().toLowerCase(),
+        phone: String(phone || '').trim(),
+        subject: subject ? String(subject).trim() : null,
+        message: String(message).trim(),
+        property_id: propertyId ? String(propertyId).trim().toUpperCase() : null,
+        type: type || (propertyId ? 'property' : 'general'),
+      };
+
+      const { data, error } = await supabase
+        .from('enquiries')
+        .insert([newEnquiry])
+        .select()
+        .single();
+
+      if (error) throw new ApiError(400, error.message);
+
+      return res.status(201).json({
+        success: true,
+        message: 'Enquiry received and saved to database',
+        enquiry: data,
       });
-    }
+    }),
+  );
 
-    const newEnquiry = {
-      name: String(name).trim(),
-      email: String(email).trim(),
-      phone: String(phone || '').trim(),
-      subject: subject ? String(subject).trim() : null,
-      message: String(message).trim(),
-      property_id: propertyId ? String(propertyId).trim().toUpperCase() : null,
-      type: type || (propertyId ? 'property' : 'general'),
-    };
+  return router;
+}
 
-    const { data, error } = await supabase
-      .from('enquiries')
-      .insert([newEnquiry])
-      .select()
-      .single();
-
-    if (error) {
-      console.error('Error creating enquiry in Supabase:', error);
-      return res.status(400).json({ error: error.message });
-    }
-
-    res.status(201).json({
-      success: true,
-      message: 'Enquiry received and saved to database',
-      enquiry: data,
-    });
-  } catch (err) {
-    console.error('Unexpected error in POST /api/enquiries:', err);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-export default router;
-
+export default createEnquiriesRouter;

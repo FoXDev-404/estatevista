@@ -2,7 +2,7 @@
 
 Target: https://estateflow.devintime.com (company panel, demo account only)
 Started: 2026-11-16
-Updated: 2026-11-16
+Updated: 2026-11-17
 
 ## Phase 0 — My project (complete)
 
@@ -73,13 +73,75 @@ Updated: 2026-11-16
 - Full 144-permission catalogue and role edit screen were not enumerated.
 - Multi-branch data scoping was not exercised (demo users have no branch).
 
-## Phase 2 — Plan (awaiting approval)
+## Phase 2 — Plan (approved 2026-11-16)
 
 - Plan written in `07-implementation-plan.md`.
-- Recommended scope: Release 1 — Core Operations MVP (auth/tenancy/permissions, settings, inventory, CRM, sales, rental, dashboard v1, public lead bridge).
+- Approved scope: Release 1 — Core Operations MVP (auth/tenancy/permissions, settings, inventory, CRM, sales, rental, dashboard v1, public lead bridge).
 - Deferred: accounting/finance, purchasing/construction, HR, gateways, full website CMS, notifications beyond in-app.
-- No application code will be written until the user confirms scope, auth approach, admin URL, legacy listing handling and dev seed.
+- Decisions locked: DB sessions with scrypt; admin workspace at `/admin`; legacy public properties retained; small fictional dev company seeded from env; versioned SQL migrations.
 
-## Phase 3 — Implement (pending approval)
+## Phase 3 — Implement (complete 2026-11-17)
 
-## Phase 4 — Verify (pending)
+Branch: `feat/r1-core-ops`. Work is tracked in `.superpowers/sdd/07-implementation-plan/progress.md`.
+
+- [x] WP0 — Foundation schema, ordered migration runner, API error contract, server test harness, helpers.
+- [x] WP1 — Auth, tenancy, roles, CSRF, login/guard, admin shell, protected legacy mutations.
+  - Server: scrypt hashes, hashed session tokens, throttling, `/api/auth/*`, `requireAuth` / `requirePermission` / `requireCsrf`, company scoping.
+  - Client: `/login`, `AuthProvider`, `ProtectedRoute`, guarded `/admin/*`, user/company/role menu, permission-filtered nav.
+  - Seed: 68 permissions, 10 default roles, fictional dev company/admin from env (credentials not committed).
+  - Verification: lint clean; client 68 tests / 10 files; server 26 tests / 6 files; HTTP smoke and role-denial checks; browser login/logout/guard check.
+- [x] WP2 — Settings, branches, team, roles, audit.
+  - Server: `/api/settings`, `/api/branches`, `/api/team`, `/api/roles`, `/api/audit-logs`, `/api/lookups`; audit snapshots for every change; 30-sequence catalog and 70-key permission catalog.
+  - Client: profile/localization/numbering tabs, branch CRUD, team invite/edit/status with self-protection, grouped role matrix with select-all and live count, audit filters and before/after diff modal; grouped sidebar with mobile drawer.
+  - Verification: lint clean; client 68 tests / 10 files; server 45 tests / 7 files. Browser cycles covered settings persistence, branch CRUD + Head Office delete `409`, team invite/edit/deactivate + cleanup, role create/edit/delete and delete blocks, audit filters/diff, permission denial (`403` UI/API), mobile drawer and 1440 px desktop layout.
+- [x] WP3 — Inventory.
+  - Server: project/building/floor/unit CRUD, status transitions and history, bulk numbering, private documents, unit-type lookups; company-scoped and permission-guarded. Project and unit deletes are soft; project delete blocked with units, unit delete blocked by active contracts.
+  - Migration `008_inventory_defaults.sql` seeds seven unit types and the private `documents` bucket.
+  - Client: project card list with type/status filters, project create/edit/detail tabs, buildings and floors, generated and single units, status modal, unit history, document upload/list/delete.
+  - Verification: lint clean; client 74 tests / 12 files; server 62 tests / 9 files. Browser cycle covered project and building creation, generation of `A-101`…`A-202`, unit create/edit/status/history, building/floor delete guards, document upload/delete, unit delete, project delete `409`, and final cleanup deletes.
+  - Fixed during verification: unit create/update wrote nonexistent actor columns; stale “correct the highlighted fields” alert after file selection; soft-deleted units blocking building/floor deletion via foreign key.
+- [x] WP4 — CRM.
+  - Server: `/api/leads` (list/search/stage/source/assignee/project filters, create, detail with follow-ups/visits/linked customer, edit, stage change, follow-ups, convert, delete), `/api/customers` (filters, CRUD, soft delete), `/api/visits` (upcoming/past, status/project/salesperson filters, lifecycle transitions, delete); permission-guarded and company-scoped. Lost stage requires a reason and clears it on reopen. Conversion creates one customer, links `lead_id`, marks the lead won and returns `409` on duplicates. Deleting a converted customer clears `lead_id` so the lead can be converted again.
+  - Migration `010_audit_events.sql` extends audit events with `status_changed`, `followup_added`, `followup_completed` and `converted`.
+  - Client: lead list filters and table, lead detail with stage stepper, activity timeline, follow-up/visit/stage/convert/delete modals; customer list and form; visits board with date/status/project/salesperson filters and lifecycle actions; audit log labels for CRM events.
+  - Verification: lint clean; client 79 tests / 13 files; server 76 tests / 10 files. Browser cycle covered project setup, lead creation and filters, lost-reason validation and reopen, follow-up create/complete, conversion, duplicate conversion `409`, customer create/edit/search/delete, visit scheduling from a lead, completed → reopen → cancelled → reopen → no-show, past-date filter, visit delete, “Open in customers” deep link, delete-customer then re-convert, and audit entries for CRM events.
+  - Fixed during verification: ambiguous `users` embeds in lead/visit/follow-up selects (explicit FK hints); missing `SupabaseAdminRepository.getLookup`; missing CRM audit event constraint values; converted-customer deletion leaving a stale `lead_id`.
+  - Quotation link from lead detail was deferred to WP5 and delivered there.
+- [x] WP5 — Sales engine.
+  - Server: `/api/quotations` (list/search/status/project, create, edit, status transitions, convert), `/api/reservations` (list, create, convert, cancel), `/api/sales` (list/search/status/project/salesperson, create, detail, update, cancel, handover, installment reschedule/waive/pay), `/api/installments` (aging filters and summary), `/api/receipts` (list, create with allocation, detail, void), `/api/commissions` (rule CRUD/toggle, ledger list and status transitions); all company-scoped and permission-guarded.
+  - Schedule math keeps rounding on the final installment; down payment is collected at sale creation; full payment creates one installment on the agreement date. Reservation expiry/cancel releases the unit; cancellation releases the unit and cancels installments and commissions. Receipt allocations must equal the receipt amount and never exceed an installment balance. Handover requires zero open schedule balance.
+  - Migration `011_sales_defaults.sql` adds sales/commission defaults; applied via Supabase MCP and verified (`late_fee_type='none'`, receipt post/void functions).
+  - Client: quotation, reservation, sale, receipt, installment and commission-rule modals; project/lead-prefilled forms; quotations, reservations, sales, sale detail, installments, collections and commissions pages; routes and permission-filtered Operations nav. Lead detail now links to a lead-prefilled quotation.
+  - Verification: lint clean; client 85 tests / 14 files; server 91 tests / 12 files. Browser cycle covered quotation creation from a lead (QT-2026-00001, net $158,500) → accepted → sale; partial receipt with auto-allocation, client over-allocation block, full receipt, handover, receipt void reopening balances; installment reschedule and waive; reservation cancel and reservation → sale conversion; sale cancel releasing the unit and cancelling installments/commissions; commission rule create/deactivate/reactivate/delete and ledger pending → approved → paid → cancelled; permission denial with a role-based Sales Agent (nav hidden, route guard, API `403`).
+  - Fixed during verification: missing `formatDateTime` client imports; React `set-state-in-effect` lint errors; sale `balance_due` still counted waived installments (now derived from open schedule balances, with a server regression test).
+  - Known limitations: an accepted quotation created from a lead does not prefill the sale customer because the quotation embed exposes only the lead id/name; the `?lead=` query parameter keeps the quotation modal open across reloads; voiding a receipt after handover reopens balances but leaves the historical handover record in place.
+- [x] WP6 — Rental.
+  - Server: `/api/tenants` (list/search/status, CRUD), `/api/leases` (list/search/status/project/unit, create, detail, edit, activate, renew, revise rent, terminate, schedule adjustments), `/api/rent-roll` (period filters, lease/tenant/project/date scoping, summary), `/api/rent-collections` (list, create with allocation, detail, void), `/api/deposits` (list, receive, deduct, refund, history); company-scoped and permission-guarded. Activation generates the rent schedule and marks the unit rented; renewal creates a follow-on lease and marks the old lease renewed; termination cancels future unpaid periods and releases the unit when no active lease remains; revise rent updates future unpaid periods.
+  - Schedule math: lease numbering `LSE-YYYY-00001`, receipts share the `RCP-` sequence with sales collections, deposit lifecycle `to_collect → held → awaiting_settlement → settled`, and rent receipts allocate oldest open periods first.
+  - Migration `012_rental_defaults.sql` adds the rental lookups/defaults; applied via Supabase MCP.
+  - Client: tenant form modal; lease create modal with activate; unified lease action modal (activate, renew, revise, terminate, adjust); rent receipt modal with editable auto-allocations; deposit action modal (receive, deduct, refund); tenants, leases, lease detail, rent roll, rent collections and security deposits pages; rental nav group; client-selector tests.
+  - Verification: lint clean; client 95 tests / 15 files; server 130 tests / 14 files. Browser cycle covered tenant creation, lease creation for A-102 (12 periods, $21,600), rent receipt and void reopening the period, rent-roll status filter, deposit receipt/deduction/early-refund transitions, revise rent effective 2027-01-01 (balance $22,600), renewal to LSE-2026-00003 with the old lease marked Renewed, termination cancelling 10 future periods and releasing the unit, deposit awaiting settlement → refund → settled, and Sales Agent `403` on every rental read/write endpoint with CRM still permitted.
+  - Fixed during verification: lease detail `500` caused by a self-referential `previous_lease` embed; one-day extra rent period when a lease ends exactly on a period boundary (regression test added); renewal left the old lease deposit in its previous status (now transitions to settled/awaiting settlement).
+- [x] WP7 — Dashboard v1 and notifications.
+  - Server: `GET /api/dashboard` gated by `dashboard.view` with per-module KPI/list visibility, month-scoped collection figures, overdue normalisation, inventory/project/pipeline aggregates and cancelled-sale exclusion; `/api/notifications` own-only feed with unread count and mark-one/all read under CSRF.
+  - Notification events: `lead.assigned`, `lead.stage_changed`, `sale.created`, `collection.received`; assignee/salesperson recipients, actor excluded, cross-user reads `404`.
+  - Client: dashboard page with four KPI cards, installments due, recent sales, inventory breakdown, project progress and pipeline deep links; `/admin` redirects to `/admin/dashboard`; topbar bell with unread badge, mark-all, outside-click/Escape and link-to-read.
+  - Verification: lint clean; client 102 tests / 16 files; server 141 tests / 16 files. Browser cycle covered KPI reconciliation to completed receipts (voided excluded), dashboard deep links, all four notification events in the recipient bell, actor exclusion, mark-one/mark-all read, a Sales Agent dashboard without the rent KPI, and Escape close.
+  - Known limitations: bell refreshes on mount/open only; down payments are stored on the sale and excluded from the receipt-based collection KPI; dashboard is company-wide, not branch-scoped.
+- [x] WP8 — Public bridge.
+  - Server: `POST /api/public/inquiries` (no auth/CSRF) resolves the configured company, validates contact details, message, optional project/unit/property links and a 8–120 character `submission_key`, stores `website_inquiries`, and creates exactly one `Website` lead with `status=new`, no assignee and the inquiry message in notes. Replaying a key returns `200 { success: true, duplicate: true }` without a second inquiry or lead; lead failure leaves the inquiry intact and a retry heals it. `GET /api/website-inquiries` requires `inquiries.view`, is company-scoped, filters type/status/search, paginates and strips `company_id`, `submission_key` and `visit_id`.
+  - Client: contact and property forms submit real bridge payloads with a per-form submission key, submitting state, success feedback and field/server errors; the simulated fallback was removed. `/admin/inquiries` provides search, type/status filters, pagination and “Open lead” links; Operations nav shows it only with `inquiries.view`. `apiClient` now turns an `AbortSignal.timeout` failure into “The request took too long. Please try again.”
+  - Verification: lint clean; client 107 tests / 17 files; server 150 tests / 17 files. Manual cycle covered a general contact inquiry and a property inquiry, both creating inquiries plus Website leads; inbox rows, type filter/search and open-lead detail (source/notes); duplicate replay `200 duplicate` with unchanged counts; invalid payload `422`; anonymous inbox `401`; anonymous `/admin/inquiries` redirect to login; and a Sales Agent with hidden nav, restricted route and API `403`. A submission that exceeded the 8-second client timeout completed on the server; retrying with the same key succeeded without a duplicate.
+  - Known limitations: visit requests create no `visits` row; lead-creation failure is swallowed for the visitor and healed only on a key replay; public project pages are not added in R1; company resolution is environment-based and single-tenant; the inquiry inbox is read-only.
+
+## Phase 4 — Verify (checklist complete; branch review pending)
+
+The full flow-by-flow verification map is in `08-release-1-verification.md`. It covers all
+Phase 1 documents, marks each R1 flow implemented/partial/deferred, cites its automated and
+manual evidence, and lists the known limitations carried into sign-off.
+
+- Verification baseline at `b13d18e`: `npm run lint` clean; client 107 tests / 17 files; server 150 tests / 17 files.
+- R1 implementation is complete across WP0–WP8; deferred modules are explicitly mapped to R2+ by the approved scope.
+- Independent review of `0b5f06b..167b55b` returned "Ready to merge? With fixes" (2 Critical, 7 Important, 7 Minor). Both Critical findings were fixed, and all Important findings except the Postgres integration tier were fixed or improved; see the review disposition table in `08-release-1-verification.md`.
+- Review-fix verification: `npm run lint` clean; client 108 tests / 18 files; server 164 tests / 17 files. Migrations `013_review_fixes.sql` and `014_deposit_atomicity.sql` applied via Supabase MCP.
+- Remaining sign-off item: the human merge/keep-branch decision. Deferred review items: Postgres integration tier (no reachable disposable database), company timezone/date format, and full transactionality for team role replacement.
