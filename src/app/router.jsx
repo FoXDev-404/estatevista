@@ -20,6 +20,7 @@ import AdminProjectDetail from '../pages/admin/AdminProjectDetail';
 import AdminUnits from '../pages/admin/AdminUnits';
 import AdminLeads from '../pages/admin/AdminLeads';
 import AdminLeadDetail from '../pages/admin/AdminLeadDetail';
+import AdminInquiries from '../pages/admin/AdminInquiries';
 import AdminVisits from '../pages/admin/AdminVisits';
 import AdminCustomers from '../pages/admin/AdminCustomers';
 import AdminQuotations from '../pages/admin/AdminQuotations';
@@ -146,6 +147,14 @@ export default function AppRoutes() {
             element={
               <ProtectedRoute permission="leads.view">
                 <AdminLeadDetail />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="inquiries"
+            element={
+              <ProtectedRoute permission="inquiries.view">
+                <AdminInquiries />
               </ProtectedRoute>
             }
           />

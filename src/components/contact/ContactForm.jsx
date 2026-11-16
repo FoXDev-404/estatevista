@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { CheckCircle2, Send } from 'lucide-react';
 import FormField from '../common/FormField';
-import { submitEnquiryApi } from '../../services/propertyApiService';
+import inquiryApiService from '../../services/inquiryApiService';
 
 const baseValues = {
   name: '',
@@ -51,6 +51,9 @@ export default function ContactForm() {
   const [errors, setErrors] = useState({});
   const [hasSubmitted, setHasSubmitted] = useState(false);
   const [submissionFeedback, setSubmissionFeedback] = useState(null);
+  const [submitError, setSubmitError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const submissionKeyRef = useRef(inquiryApiService.createSubmissionKey());
 
   const updateField = (field) => (event) => {
     setValues((current) => ({ ...current, [field]: event.target.value }));
@@ -61,6 +64,7 @@ export default function ContactForm() {
       return next;
     });
     if (hasSubmitted) setHasSubmitted(false);
+    if (submitError) setSubmitError('');
   };
 
   const handleSubmit = async (event) => {
@@ -73,19 +77,28 @@ export default function ContactForm() {
       return;
     }
 
+    setIsSubmitting(true);
+    setSubmitError('');
     try {
-      const result = await submitEnquiryApi({ ...values, type: 'general' });
-      setSubmissionFeedback(
-        result?.simulated
-          ? 'This enquiry has been validated locally. Connect your Supabase credentials in .env to persist directly to PostgreSQL.'
-          : 'Thank you! Your message has been received and saved into PostgreSQL.'
+      await inquiryApiService.submitPublicInquiry({
+        ...values,
+        type: 'general',
+        submission_key: submissionKeyRef.current,
+        source_page: inquiryApiService.publicSourcePage(),
+      });
+      setSubmissionFeedback('Thank you! Your message has been received.');
+      setHasSubmitted(true);
+      setValues(baseValues);
+      submissionKeyRef.current = inquiryApiService.createSubmissionKey();
+    } catch (error) {
+      if (error?.fields) setErrors((current) => ({ ...current, ...error.fields }));
+      setHasSubmitted(false);
+      setSubmitError(
+        error?.message || 'Your message could not be sent. Please try again in a moment.',
       );
-    } catch {
-      setSubmissionFeedback('This enquiry was prepared locally.');
+    } finally {
+      setIsSubmitting(false);
     }
-
-    setHasSubmitted(true);
-    setValues(baseValues);
   };
 
   return (
@@ -98,6 +111,12 @@ export default function ContactForm() {
             <p>{submissionFeedback}</p>
           </div>
         </div>
+      ) : null}
+
+      {submitError ? (
+        <p className="form-error-summary" role="alert">
+          {submitError}
+        </p>
       ) : null}
 
       {Object.keys(errors).length > 0 ? (
@@ -164,9 +183,13 @@ export default function ContactForm() {
       </div>
 
       <div className="contact-form__footer">
-        <button type="submit" className="button button--primary button--md">
+        <button
+          type="submit"
+          className="button button--primary button--md"
+          disabled={isSubmitting}
+        >
           <Send size={16} aria-hidden="true" />
-          Submit message
+          {isSubmitting ? 'Sending…' : 'Submit message'}
         </button>
         <p>
           Your enquiry is reviewed by the team and used to continue the conversation.

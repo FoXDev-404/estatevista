@@ -33,12 +33,18 @@ import { createRentCollectionsRouter } from './routes/rentCollections.js';
 import { createDepositsRouter } from './routes/deposits.js';
 import { createDashboardRouter } from './routes/dashboard.js';
 import { createNotificationsRouter } from './routes/notifications.js';
+import { createPublicInquiriesRouter } from './routes/publicInquiries.js';
+import { createWebsiteInquiriesRouter } from './routes/websiteInquiries.js';
 import { createPropertiesRouter } from './routes/properties.js';
 import { createEnquiriesRouter } from './routes/enquiries.js';
 import { createUploadRouter } from './routes/upload.js';
 import { SupabaseAdminRepository } from './admin/repository.js';
 
-export function createApp({ authRepository, adminRepository } = {}) {
+export function createApp({
+  authRepository,
+  adminRepository,
+  publicCompanySlug = config.publicCompanySlug,
+} = {}) {
   const repository = authRepository || new SupabaseAuthRepository();
   const admin = adminRepository || new SupabaseAdminRepository();
   const authService = new AuthService({
@@ -90,6 +96,11 @@ export function createApp({ authRepository, adminRepository } = {}) {
   app.use('/api/deposits', createDepositsRouter({ auth, repository: admin }));
   app.use('/api/dashboard', createDashboardRouter({ auth, repository: admin }));
   app.use('/api/notifications', createNotificationsRouter({ auth, repository: admin }));
+  app.use(
+    '/api/public/inquiries',
+    createPublicInquiriesRouter({ repository: admin, publicCompanySlug }),
+  );
+  app.use('/api/website-inquiries', createWebsiteInquiriesRouter({ auth, repository: admin }));
   app.use('/api/properties', createPropertiesRouter({ auth }));
   app.use('/api/enquiries', createEnquiriesRouter({ auth }));
   app.use('/api/upload', createUploadRouter({ auth }));

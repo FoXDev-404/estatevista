@@ -35,13 +35,21 @@ export async function apiRequest(
     if (csrfToken) requestHeaders['X-CSRF-Token'] = csrfToken;
   }
 
-  const response = await fetch(`${API_BASE}${path}`, {
-    method: verb,
-    credentials: 'same-origin',
-    headers: requestHeaders,
-    body: body === undefined ? undefined : JSON.stringify(body),
-    signal: signal || (timeout ? AbortSignal.timeout(timeout) : undefined),
-  });
+  let response;
+  try {
+    response = await fetch(`${API_BASE}${path}`, {
+      method: verb,
+      credentials: 'same-origin',
+      headers: requestHeaders,
+      body: body === undefined ? undefined : JSON.stringify(body),
+      signal: signal || (timeout ? AbortSignal.timeout(timeout) : undefined),
+    });
+  } catch (error) {
+    if (error?.name === 'TimeoutError') {
+      throw new ApiError('The request took too long. Please try again.', { status: 0 });
+    }
+    throw error;
+  }
 
   const contentType = response.headers.get('content-type') || '';
   const payload = contentType.includes('application/json')

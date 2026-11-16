@@ -80,7 +80,7 @@ Updated: 2026-11-17
 - Deferred: accounting/finance, purchasing/construction, HR, gateways, full website CMS, notifications beyond in-app.
 - Decisions locked: DB sessions with scrypt; admin workspace at `/admin`; legacy public properties retained; small fictional dev company seeded from env; versioned SQL migrations.
 
-## Phase 3 — Implement (in progress)
+## Phase 3 — Implement (complete 2026-11-17)
 
 Branch: `feat/r1-core-ops`. Work is tracked in `.superpowers/sdd/07-implementation-plan/progress.md`.
 
@@ -128,6 +128,11 @@ Branch: `feat/r1-core-ops`. Work is tracked in `.superpowers/sdd/07-implementati
   - Client: dashboard page with four KPI cards, installments due, recent sales, inventory breakdown, project progress and pipeline deep links; `/admin` redirects to `/admin/dashboard`; topbar bell with unread badge, mark-all, outside-click/Escape and link-to-read.
   - Verification: lint clean; client 102 tests / 16 files; server 141 tests / 16 files. Browser cycle covered KPI reconciliation to completed receipts (voided excluded), dashboard deep links, all four notification events in the recipient bell, actor exclusion, mark-one/mark-all read, a Sales Agent dashboard without the rent KPI, and Escape close.
   - Known limitations: bell refreshes on mount/open only; down payments are stored on the sale and excluded from the receipt-based collection KPI; dashboard is company-wide, not branch-scoped.
-- [ ] WP8 — Public bridge.
+- [x] WP8 — Public bridge.
+  - Server: `POST /api/public/inquiries` (no auth/CSRF) resolves the configured company, validates contact details, message, optional project/unit/property links and a 8–120 character `submission_key`, stores `website_inquiries`, and creates exactly one `Website` lead with `status=new`, no assignee and the inquiry message in notes. Replaying a key returns `200 { success: true, duplicate: true }` without a second inquiry or lead; lead failure leaves the inquiry intact and a retry heals it. `GET /api/website-inquiries` requires `inquiries.view`, is company-scoped, filters type/status/search, paginates and strips `company_id`, `submission_key` and `visit_id`.
+  - Client: contact and property forms submit real bridge payloads with a per-form submission key, submitting state, success feedback and field/server errors; the simulated fallback was removed. `/admin/inquiries` provides search, type/status filters, pagination and “Open lead” links; Operations nav shows it only with `inquiries.view`. `apiClient` now turns an `AbortSignal.timeout` failure into “The request took too long. Please try again.”
+  - Verification: lint clean; client 107 tests / 17 files; server 150 tests / 17 files. Manual cycle covered a general contact inquiry and a property inquiry, both creating inquiries plus Website leads; inbox rows, type filter/search and open-lead detail (source/notes); duplicate replay `200 duplicate` with unchanged counts; invalid payload `422`; anonymous inbox `401`; anonymous `/admin/inquiries` redirect to login; and a Sales Agent with hidden nav, restricted route and API `403`. A submission that exceeded the 8-second client timeout completed on the server; retrying with the same key succeeded without a duplicate.
+  - Known limitations: visit requests create no `visits` row; lead-creation failure is swallowed for the visitor and healed only on a key replay; public project pages are not added in R1; company resolution is environment-based and single-tenant; the inquiry inbox is read-only.
+
 
 ## Phase 4 — Verify (pending)

@@ -1,5 +1,5 @@
 import propertyRepository from './propertyRepository';
-import { ApiError, apiRequest } from './apiClient';
+import { apiRequest } from './apiClient';
 
 const isTestEnv = typeof process !== 'undefined' && process.env?.NODE_ENV === 'test';
 
@@ -90,28 +90,6 @@ export async function resetPropertiesApi() {
 }
 
 /**
- * Submit an enquiry or contact form.
- */
-export async function submitEnquiryApi(payload) {
-  try {
-    return await apiRequest('/enquiries', {
-      method: 'POST',
-      body: payload,
-      timeout: 4000,
-    });
-  } catch (error) {
-    if (error instanceof ApiError && error.status) {
-      return { success: false, error: error.message, fields: error.fields || null };
-    }
-    return {
-      success: true, // Graceful fallback simulation
-      simulated: true,
-      message: 'Recorded locally (backend offline or unavailable)',
-    };
-  }
-}
-
-/**
  * Upload an image file to storage via the API.
  */
 export async function uploadImageApi(file) {
@@ -140,7 +118,6 @@ const propertyApiService = {
   remove: deletePropertyApi,
   delete: deletePropertyApi,
   reset: resetPropertiesApi,
-  submitEnquiry: submitEnquiryApi,
   uploadImage: uploadImageApi,
 };
 

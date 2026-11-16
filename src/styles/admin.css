@@ -3485,3 +3485,19 @@
   }
 }
 
+/* --------------------------------------------------------------------------
+   Website inquiries
+   -------------------------------------------------------------------------- */
+.inquiry-table__badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.inquiry-table__message {
+  max-width: 34rem;
+  margin: 0;
+  color: var(--color-body);
+  line-height: 1.55;
+}
+

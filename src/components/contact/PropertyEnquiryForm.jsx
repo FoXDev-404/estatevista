@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { CheckCircle2, Send } from 'lucide-react';
 import FormField from '../common/FormField';
-import { submitEnquiryApi } from '../../services/propertyApiService';
+import inquiryApiService from '../../services/inquiryApiService';
 
 const initialValues = { name: '', email: '', phone: '', message: '' };
 
@@ -34,6 +34,9 @@ export default function PropertyEnquiryForm({ property }) {
   const [errors, setErrors] = useState({});
   const [hasSubmitted, setHasSubmitted] = useState(false);
   const [submissionFeedback, setSubmissionFeedback] = useState(null);
+  const [submitError, setSubmitError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const submissionKeyRef = useRef(inquiryApiService.createSubmissionKey());
 
   const updateField = (field) => (event) => {
     setValues((current) => ({ ...current, [field]: event.target.value }));
@@ -44,6 +47,7 @@ export default function PropertyEnquiryForm({ property }) {
       return next;
     });
     if (hasSubmitted) setHasSubmitted(false);
+    if (submitError) setSubmitError('');
   };
 
   const handleSubmit = async (event) => {
@@ -55,23 +59,31 @@ export default function PropertyEnquiryForm({ property }) {
       return;
     }
 
+    setIsSubmitting(true);
+    setSubmitError('');
     try {
-      const result = await submitEnquiryApi({
+      await inquiryApiService.submitPublicInquiry({
         ...values,
-        propertyId: property.id,
         type: 'property',
+        property_id: property.id,
+        submission_key: submissionKeyRef.current,
+        source_page: inquiryApiService.publicSourcePage(),
       });
       setSubmissionFeedback(
-        result?.simulated
-          ? 'This enquiry has been validated locally. Connect your Supabase credentials in .env to persist directly to PostgreSQL.'
-          : `Thank you! Your enquiry for "${property.title}" has been saved into PostgreSQL.`
+        `Thank you! Your enquiry for "${property.title}" has been received.`,
       );
-    } catch {
-      setSubmissionFeedback('This enquiry was prepared locally.');
+      setHasSubmitted(true);
+      setValues(initialValues);
+      submissionKeyRef.current = inquiryApiService.createSubmissionKey();
+    } catch (error) {
+      if (error?.fields) setErrors((current) => ({ ...current, ...error.fields }));
+      setHasSubmitted(false);
+      setSubmitError(
+        error?.message || 'Your enquiry could not be sent. Please try again in a moment.',
+      );
+    } finally {
+      setIsSubmitting(false);
     }
-
-    setHasSubmitted(true);
-    setValues(initialValues);
   };
 
   return (
@@ -90,6 +102,12 @@ export default function PropertyEnquiryForm({ property }) {
             <p>{submissionFeedback}</p>
           </div>
         </div>
+      ) : null}
+
+      {submitError ? (
+        <p className="form-error-summary" role="alert">
+          {submitError}
+        </p>
       ) : null}
 
       {Object.keys(errors).length > 0 ? (
@@ -155,9 +173,13 @@ export default function PropertyEnquiryForm({ property }) {
       </div>
 
       <div className="enquiry-form__footer">
-        <button type="submit" className="button button--primary button--md">
+        <button
+          type="submit"
+          className="button button--primary button--md"
+          disabled={isSubmitting}
+        >
           <Send size={16} aria-hidden="true" />
-          Submit enquiry
+          {isSubmitting ? 'Sending…' : 'Submit enquiry'}
         </button>
         <p>
           We will use your details to arrange the next conversation or viewing.

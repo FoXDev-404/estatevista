@@ -12,6 +12,7 @@ import {
   FileText,
   FileSignature,
   Handshake,
+  Inbox,
   LayoutDashboard,
   LayoutGrid,
   LogOut,
@@ -64,6 +65,12 @@ const NAV_GROUPS = [
         label: 'Leads',
         icon: UserPlus,
         permission: 'leads.view',
+      },
+      {
+        to: '/admin/inquiries',
+        label: 'Website inquiries',
+        icon: Inbox,
+        permission: 'inquiries.view',
       },
       {
         to: '/admin/visits',

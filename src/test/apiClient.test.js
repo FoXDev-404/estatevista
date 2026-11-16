@@ -44,6 +44,23 @@ describe('apiClient', () => {
     expect(options.headers['X-CSRF-Token']).toBeUndefined();
   });
 
+  it('turns a request timeout into a friendly ApiError', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockRejectedValue(new DOMException('signal timed out', 'TimeoutError')),
+    );
+
+    const error = await apiRequest('/public/inquiries', {
+      method: 'POST',
+      body: {},
+      timeout: 10,
+    }).catch((caught) => caught);
+
+    expect(error).toBeInstanceOf(ApiError);
+    expect(error.status).toBe(0);
+    expect(error.message).toBe('The request took too long. Please try again.');
+  });
+
   it('turns a field error response into an ApiError', async () => {
     const fetchMock = vi
       .fn()

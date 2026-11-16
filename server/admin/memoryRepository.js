@@ -26,11 +26,13 @@ export class MemoryAdminRepository {
     unitTypes = [],
     units = [],
     documents = [],
+    properties = [],
     lookups = [],
     leads = [],
     customers = [],
     leadFollowups = [],
     visits = [],
+    websiteInquiries = [],
     quotations = [],
     reservations = [],
     sales = [],
@@ -61,11 +63,13 @@ export class MemoryAdminRepository {
     this.unitTypes = unitTypes.map((row) => ({ ...row }));
     this.units = units.map((row) => ({ ...row }));
     this.documents = documents.map((row) => ({ ...row }));
+    this.properties = properties.map((row) => ({ ...row }));
     this.lookups = lookups.map((row) => ({ ...row }));
     this.leads = leads.map((row) => ({ ...row }));
     this.customers = customers.map((row) => ({ ...row }));
     this.leadFollowups = leadFollowups.map((row) => ({ ...row }));
     this.visits = visits.map((row) => ({ ...row }));
+    this.websiteInquiries = websiteInquiries.map((row) => ({ ...row }));
     this.quotations = quotations.map((row) => ({ ...row }));
     this.reservations = reservations.map((row) => ({ ...row }));
     this.sales = sales.map((row) => ({ ...row }));
@@ -737,6 +741,113 @@ export class MemoryAdminRepository {
       ...followup,
       created_by_user: this.team.find((member) => member.id === followup.created_by) || null,
     };
+  }
+
+  // --- Public bridge: website inquiries -> Website leads -----------------
+
+  async getCompanyBySlug(slug) {
+    const normalized = String(slug || '').trim().toLowerCase();
+    const company = this.companies.find(
+      (row) => String(row.slug || '').toLowerCase() === normalized && row.is_active !== false,
+    );
+    return company ? { ...company } : null;
+  }
+
+  async findSourceByName(companyId, name) {
+    const normalized = String(name || '').trim().toLowerCase();
+    const source = this.lookups.find(
+      (row) =>
+        row.company_id === companyId &&
+        row.list_key === 'source' &&
+        row.is_active !== false &&
+        String(row.name || '').toLowerCase() === normalized,
+    );
+    return source ? { ...source } : null;
+  }
+
+  async getPublicProperty(id) {
+    const normalized = String(id || '').trim().toUpperCase();
+    const property = this.properties.find(
+      (row) => String(row.id || '').toUpperCase() === normalized,
+    );
+    return property ? { id: property.id, title: property.title } : null;
+  }
+
+  websiteInquirySummary(companyId, row) {
+    const project = this.projects.find(
+      (item) => item.id === row.project_id && item.company_id === companyId,
+    );
+    const unit = this.units.find(
+      (item) => item.id === row.unit_id && item.company_id === companyId && !item.deleted_at,
+    );
+    const property = row.property_id
+      ? this.properties.find(
+          (item) =>
+            String(item.id || '').toUpperCase() === String(row.property_id || '').toUpperCase(),
+        )
+      : null;
+    const lead = this.leads.find(
+      (item) =>
+        item.id === row.lead_id && item.company_id === companyId && !item.deleted_at,
+    );
+    return {
+      ...row,
+      project: project ? { id: project.id, name: project.name } : null,
+      unit: unit ? { id: unit.id, unit_number: unit.unit_number } : null,
+      property: property ? { id: property.id, title: property.title } : null,
+      lead: lead ? { id: lead.id, name: lead.name, status: lead.status } : null,
+    };
+  }
+
+  async listWebsiteInquiries(companyId) {
+    return this.websiteInquiries
+      .filter((row) => row.company_id === companyId)
+      .map((row) => this.websiteInquirySummary(companyId, row))
+      .sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)));
+  }
+
+  async findWebsiteInquiryBySubmissionKey(companyId, submissionKey) {
+    const row = this.websiteInquiries.find(
+      (item) => item.company_id === companyId && item.submission_key === submissionKey,
+    );
+    return row ? this.websiteInquirySummary(companyId, row) : null;
+  }
+
+  async createWebsiteInquiry(companyId, patch) {
+    if (this.websiteInquiries.some((row) => row.submission_key === patch.submission_key)) {
+      throw new ApiError(409, 'Duplicate submission.');
+    }
+    const row = {
+      id: randomUUID(),
+      company_id: companyId,
+      type: patch.type ?? 'general',
+      name: patch.name,
+      phone: patch.phone ?? null,
+      email: patch.email ?? null,
+      project_id: patch.project_id ?? null,
+      unit_id: patch.unit_id ?? null,
+      property_id: patch.property_id ?? null,
+      message: patch.message ?? null,
+      source_page: patch.source_page ?? null,
+      locale: patch.locale || 'en',
+      status: patch.status || 'new',
+      lead_id: patch.lead_id ?? null,
+      visit_id: null,
+      submission_key: patch.submission_key,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    this.websiteInquiries.push(row);
+    return this.websiteInquirySummary(companyId, row);
+  }
+
+  async updateWebsiteInquiry(companyId, id, patch) {
+    const row = this.websiteInquiries.find(
+      (item) => item.company_id === companyId && item.id === id,
+    );
+    if (!row) throw notFound('Website inquiry not found.');
+    Object.assign(row, patch, { updated_at: new Date().toISOString() });
+    return this.websiteInquirySummary(companyId, row);
   }
 
   customerSummary(companyId, customer) {

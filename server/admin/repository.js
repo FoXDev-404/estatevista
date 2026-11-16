@@ -44,6 +44,8 @@ const RENT_SCHEDULE_SELECT =
   '*, lease:leases(id, number, status, tenant_id, unit_id, grace_days, tenant:tenants(id, name, phone), unit:units(id, unit_number, project_id, project:projects(id, name)))';
 const DEPOSIT_SELECT =
   '*, lease:leases(id, number, status, start_date, end_date, tenant_id, unit_id, tenant:tenants(id, name, phone), unit:units(id, unit_number)), transactions:deposit_transactions(*)';
+const WEBSITE_INQUIRY_SELECT =
+  'id, company_id, type, name, phone, email, project_id, unit_id, property_id, message, source_page, locale, status, lead_id, visit_id, submission_key, created_at, updated_at, project:projects(id, name), unit:units(id, unit_number), property:properties(id, title), lead:leads(id, name, status)';
 
 /**
  * Supabase-backed persistence for company settings, branches, team, roles and
@@ -1370,6 +1372,102 @@ export class SupabaseAdminRepository {
       .maybeSingle();
     if (error) fail('updateLeadFollowup', error);
     return data ? this.getLeadFollowup(companyId, data.id) : null;
+  }
+
+  // --- Public bridge: website inquiries -> Website leads -----------------
+
+  async getCompanyBySlug(slug) {
+    const { data, error } = await this.client()
+      .from('companies')
+      .select('*')
+      .ilike('slug', String(slug || '').trim())
+      .eq('is_active', true)
+      .maybeSingle();
+    if (error) fail('getCompanyBySlug', error);
+    return data || null;
+  }
+
+  async findSourceByName(companyId, name) {
+    const { data, error } = await this.client()
+      .from('lookups')
+      .select('id, name, list_key')
+      .eq('company_id', companyId)
+      .eq('list_key', 'source')
+      .eq('is_active', true)
+      .ilike('name', String(name || '').trim())
+      .maybeSingle();
+    if (error) fail('findSourceByName', error);
+    return data || null;
+  }
+
+  async getPublicProperty(id) {
+    const { data, error } = await this.client()
+      .from('properties')
+      .select('id, title')
+      .eq('id', String(id || '').trim().toUpperCase())
+      .maybeSingle();
+    if (error) fail('getPublicProperty', error);
+    return data || null;
+  }
+
+  async getWebsiteInquiry(companyId, id) {
+    const { data, error } = await this.client()
+      .from('website_inquiries')
+      .select(WEBSITE_INQUIRY_SELECT)
+      .eq('company_id', companyId)
+      .eq('id', id)
+      .maybeSingle();
+    if (error) fail('getWebsiteInquiry', error);
+    return data || null;
+  }
+
+  async listWebsiteInquiries(companyId) {
+    const { data, error } = await this.client()
+      .from('website_inquiries')
+      .select(WEBSITE_INQUIRY_SELECT)
+      .eq('company_id', companyId)
+      .order('created_at', { ascending: false });
+    if (error) fail('listWebsiteInquiries', error);
+    return data || [];
+  }
+
+  async findWebsiteInquiryBySubmissionKey(companyId, submissionKey) {
+    const { data, error } = await this.client()
+      .from('website_inquiries')
+      .select(WEBSITE_INQUIRY_SELECT)
+      .eq('company_id', companyId)
+      .eq('submission_key', submissionKey)
+      .maybeSingle();
+    if (error) fail('findWebsiteInquiryBySubmissionKey', error);
+    return data || null;
+  }
+
+  async createWebsiteInquiry(companyId, patch) {
+    const { data, error } = await this.client()
+      .from('website_inquiries')
+      .insert({ company_id: companyId, ...patch })
+      .select('id')
+      .single();
+    if (error) {
+      if (error.code === '23505') {
+        throw new ApiError(409, 'Duplicate submission.');
+      }
+      fail('createWebsiteInquiry', error);
+    }
+    return this.getWebsiteInquiry(companyId, data.id);
+  }
+
+  async updateWebsiteInquiry(companyId, id, patch) {
+    const { data, error } = await this.client()
+      .from('website_inquiries')
+      .update({ ...patch, updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .eq('company_id', companyId)
+      .select('id')
+      .maybeSingle();
+    if (error) fail('updateWebsiteInquiry', error);
+    if (!data) throw notFound('Website inquiry not found.');
+    return this.getWebsiteInquiry(companyId, data.id);
   }
 
   customerWithTotals(row) {
