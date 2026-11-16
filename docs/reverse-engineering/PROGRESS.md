@@ -90,7 +90,10 @@ Branch: `feat/r1-core-ops`. Work is tracked in `.superpowers/sdd/07-implementati
   - Client: `/login`, `AuthProvider`, `ProtectedRoute`, guarded `/admin/*`, user/company/role menu, permission-filtered nav.
   - Seed: 68 permissions, 10 default roles, fictional dev company/admin from env (credentials not committed).
   - Verification: lint clean; client 68 tests / 10 files; server 26 tests / 6 files; HTTP smoke and role-denial checks; browser login/logout/guard check.
-- [ ] WP2 — Settings, branches, team, roles, audit.
+- [x] WP2 — Settings, branches, team, roles, audit.
+  - Server: `/api/settings`, `/api/branches`, `/api/team`, `/api/roles`, `/api/audit-logs`, `/api/lookups`; audit snapshots for every change; 30-sequence catalog and 70-key permission catalog.
+  - Client: profile/localization/numbering tabs, branch CRUD, team invite/edit/status with self-protection, grouped role matrix with select-all and live count, audit filters and before/after diff modal; grouped sidebar with mobile drawer.
+  - Verification: lint clean; client 68 tests / 10 files; server 45 tests / 7 files. Browser cycles covered settings persistence, branch CRUD + Head Office delete `409`, team invite/edit/deactivate + cleanup, role create/edit/delete and delete blocks, audit filters/diff, permission denial (`403` UI/API), mobile drawer and 1440 px desktop layout.
 - [ ] WP3 — Inventory.
 - [ ] WP4 — CRM.
 - [ ] WP5 — Sales engine.

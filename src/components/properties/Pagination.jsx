@@ -26,13 +26,19 @@ const buildPageList = (currentPage, totalPages) => {
   return result;
 };
 
-export default function Pagination({ page, totalPages, onPageChange, className = '' }) {
+export default function Pagination({
+  page,
+  totalPages,
+  onPageChange,
+  className = '',
+  label = 'Property pagination',
+}) {
   if (totalPages <= 1) return null;
 
   const pages = buildPageList(page, totalPages);
 
   return (
-    <nav className={`pagination${className ? ` ${className}` : ''}`} aria-label="Property pagination">
+    <nav className={`pagination${className ? ` ${className}` : ''}`} aria-label={label}>
       <button
         type="button"
         className="pagination__arrow"

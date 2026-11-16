@@ -15,31 +15,41 @@ const ACTION_LABELS = {
   export: 'Export',
 };
 
+const GROUPS = [
+  { key: 'overview', label: 'Overview' },
+  { key: 'inventory', label: 'Properties & inventory' },
+  { key: 'crm', label: 'Leads & customers' },
+  { key: 'sales', label: 'Sales' },
+  { key: 'rental', label: 'Rental' },
+  { key: 'workspace', label: 'Operation team & setup' },
+  { key: 'reporting', label: 'Reports & website' },
+];
+
 const MODULES = [
-  { key: 'dashboard', label: 'Dashboard', actions: ['view'] },
-  { key: 'properties', label: 'Website properties', actions: ['view', 'manage'] },
-  { key: 'projects', label: 'Projects', actions: ['view', 'create', 'edit', 'delete'] },
-  { key: 'units', label: 'Units', actions: ['view', 'create', 'edit', 'delete'] },
-  { key: 'leads', label: 'Leads', actions: ['view', 'create', 'edit', 'delete'] },
-  { key: 'visits', label: 'Visits', actions: ['view', 'create', 'edit', 'delete'] },
-  { key: 'customers', label: 'Customers', actions: ['view', 'create', 'edit', 'delete'] },
-  { key: 'quotations', label: 'Quotations', actions: ['view', 'create', 'edit', 'delete'] },
-  { key: 'reservations', label: 'Reservations', actions: ['view', 'create', 'cancel'] },
-  { key: 'sales', label: 'Sales', actions: ['view', 'create', 'edit', 'cancel'] },
-  { key: 'collections', label: 'Collections', actions: ['view', 'create', 'void'] },
-  { key: 'commissions', label: 'Commissions', actions: ['view', 'manage'] },
-  { key: 'tenants', label: 'Tenants', actions: ['view', 'create', 'edit', 'delete'] },
-  { key: 'leases', label: 'Leases', actions: ['view', 'create', 'edit', 'terminate'] },
-  { key: 'rent', label: 'Rent', actions: ['view', 'collect'] },
-  { key: 'deposits', label: 'Security deposits', actions: ['view', 'manage'] },
-  { key: 'inquiries', label: 'Website inquiries', actions: ['view', 'manage'] },
-  { key: 'reports', label: 'Reports', actions: ['view', 'export'] },
-  { key: 'settings', label: 'Settings', actions: ['view', 'edit'] },
-  { key: 'branches', label: 'Branches', actions: ['view', 'create', 'edit', 'delete'] },
-  { key: 'team', label: 'Team', actions: ['view', 'create', 'edit'] },
-  { key: 'roles', label: 'Roles', actions: ['view', 'edit'] },
-  { key: 'audit', label: 'Audit log', actions: ['view'] },
-  { key: 'enquiries', label: 'Legacy enquiries', actions: ['view'] },
+  { key: 'dashboard', label: 'Dashboard', group: 'overview', actions: ['view'] },
+  { key: 'properties', label: 'Website properties', group: 'inventory', actions: ['view', 'manage'] },
+  { key: 'projects', label: 'Projects', group: 'inventory', actions: ['view', 'create', 'edit', 'delete'] },
+  { key: 'units', label: 'Units', group: 'inventory', actions: ['view', 'create', 'edit', 'delete'] },
+  { key: 'leads', label: 'Leads', group: 'crm', actions: ['view', 'create', 'edit', 'delete'] },
+  { key: 'visits', label: 'Visits', group: 'crm', actions: ['view', 'create', 'edit', 'delete'] },
+  { key: 'customers', label: 'Customers', group: 'crm', actions: ['view', 'create', 'edit', 'delete'] },
+  { key: 'quotations', label: 'Quotations', group: 'sales', actions: ['view', 'create', 'edit', 'delete'] },
+  { key: 'reservations', label: 'Reservations', group: 'sales', actions: ['view', 'create', 'cancel'] },
+  { key: 'sales', label: 'Sales', group: 'sales', actions: ['view', 'create', 'edit', 'cancel'] },
+  { key: 'collections', label: 'Collections', group: 'sales', actions: ['view', 'create', 'void'] },
+  { key: 'commissions', label: 'Commissions', group: 'sales', actions: ['view', 'manage'] },
+  { key: 'tenants', label: 'Tenants', group: 'rental', actions: ['view', 'create', 'edit', 'delete'] },
+  { key: 'leases', label: 'Leases', group: 'rental', actions: ['view', 'create', 'edit', 'terminate'] },
+  { key: 'rent', label: 'Rent', group: 'rental', actions: ['view', 'collect'] },
+  { key: 'deposits', label: 'Security deposits', group: 'rental', actions: ['view', 'manage'] },
+  { key: 'inquiries', label: 'Website inquiries', group: 'reporting', actions: ['view', 'manage'] },
+  { key: 'reports', label: 'Reports', group: 'reporting', actions: ['view', 'export'] },
+  { key: 'settings', label: 'Settings', group: 'workspace', actions: ['view', 'edit'] },
+  { key: 'branches', label: 'Branches', group: 'workspace', actions: ['view', 'create', 'edit', 'delete'] },
+  { key: 'team', label: 'Team', group: 'workspace', actions: ['view', 'create', 'edit'] },
+  { key: 'roles', label: 'Roles & permissions', group: 'workspace', actions: ['view', 'create', 'edit', 'delete'] },
+  { key: 'audit', label: 'Audit log', group: 'workspace', actions: ['view'] },
+  { key: 'enquiries', label: 'Legacy enquiries', group: 'reporting', actions: ['view'] },
 ];
 
 export const PERMISSIONS = MODULES.flatMap((module, moduleIndex) =>
@@ -57,11 +67,17 @@ export const PERMISSION_KEYS = PERMISSIONS.map((permission) => permission.key);
 export const PERMISSION_MODULES = MODULES.map((module) => ({
   key: module.key,
   label: module.label,
+  group: module.group,
   actions: module.actions.map((action) => ({
     key: action,
     label: ACTION_LABELS[action] || action,
     permission: `${module.key}.${action}`,
   })),
+}));
+
+export const PERMISSION_GROUPS = GROUPS.map((group) => ({
+  ...group,
+  modules: PERMISSION_MODULES.filter((module) => module.group === group.key),
 }));
 
 function viewOnlyKeys() {

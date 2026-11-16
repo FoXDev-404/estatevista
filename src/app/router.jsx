@@ -13,6 +13,12 @@ import NotFound from '../pages/NotFound';
 import AdminProperties from '../pages/admin/AdminProperties';
 import AdminPropertyCreate from '../pages/admin/AdminPropertyCreate';
 import AdminPropertyEdit from '../pages/admin/AdminPropertyEdit';
+import AdminSettings from '../pages/admin/AdminSettings';
+import AdminBranches from '../pages/admin/AdminBranches';
+import AdminTeam from '../pages/admin/AdminTeam';
+import AdminRoles from '../pages/admin/AdminRoles';
+import AdminRoleEditor from '../pages/admin/AdminRoleEditor';
+import AdminAuditLogs from '../pages/admin/AdminAuditLogs';
 
 export default function AppRoutes() {
   return (
@@ -54,6 +60,62 @@ export default function AppRoutes() {
             element={
               <ProtectedRoute permission="properties.manage">
                 <AdminPropertyEdit />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="settings"
+            element={
+              <ProtectedRoute permission="settings.view">
+                <AdminSettings />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="branches"
+            element={
+              <ProtectedRoute permission="branches.view">
+                <AdminBranches />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="team"
+            element={
+              <ProtectedRoute permission="team.view">
+                <AdminTeam />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="roles"
+            element={
+              <ProtectedRoute permission="roles.view">
+                <AdminRoles />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="roles/new"
+            element={
+              <ProtectedRoute permission="roles.create">
+                <AdminRoleEditor />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="roles/:id/edit"
+            element={
+              <ProtectedRoute permission="roles.edit">
+                <AdminRoleEditor />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="audit-logs"
+            element={
+              <ProtectedRoute permission="audit.view">
+                <AdminAuditLogs />
               </ProtectedRoute>
             }
           />

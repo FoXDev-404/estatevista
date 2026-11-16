@@ -2,16 +2,7 @@ import { supabase } from './supabaseClient.js';
 import { config } from './lib/config.js';
 import { DEFAULT_ROLES, PERMISSIONS } from './auth/permissions.js';
 import { hashPassword } from './auth/password.js';
-
-const SEQUENCES = [
-  { document_type: 'quotation', prefix: 'QT-' },
-  { document_type: 'reservation', prefix: 'RSV-' },
-  { document_type: 'sale', prefix: 'SA-' },
-  { document_type: 'receipt', prefix: 'RCP-' },
-  { document_type: 'lease', prefix: 'LSE-' },
-  { document_type: 'rent_receipt', prefix: 'RR-' },
-  { document_type: 'deposit_receipt', prefix: 'DR-' },
-];
+import { SEQUENCE_DEFINITIONS } from './admin/catalog.js';
 
 async function upsertPermissions() {
   const { error } = await supabase
@@ -71,12 +62,12 @@ async function seedSettingsAndSequences(companyId) {
     .upsert({ company_id: companyId }, { onConflict: 'company_id', ignoreDuplicates: true });
   if (settingsError) throw new Error(`settings: ${settingsError.message}`);
 
-  const rows = SEQUENCES.map((sequence) => ({
+  const rows = SEQUENCE_DEFINITIONS.map((sequence) => ({
     company_id: companyId,
     document_type: sequence.document_type,
     prefix: sequence.prefix,
-    padding: 4,
-    reset_period: 'yearly',
+    padding: sequence.padding,
+    reset_period: sequence.reset_period,
   }));
 
   const { error } = await supabase

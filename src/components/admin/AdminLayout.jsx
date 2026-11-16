@@ -5,17 +5,66 @@ import {
   ChevronDown,
   ExternalLink,
   LogOut,
+  MapPin,
+  Menu,
+  ScrollText,
+  Settings,
   ShieldCheck,
+  Users,
+  X,
 } from 'lucide-react';
 import Logo from '../common/Logo';
 import { useAuth } from '../../hooks/useAuth';
+import { initialsOf } from '../../services/adminFormatters';
 
-const NAV_ITEMS = [
+const NAV_GROUPS = [
   {
-    to: '/admin/properties',
-    label: 'Property studio',
-    icon: Building2,
-    permission: 'properties.view',
+    id: 'operations',
+    label: 'Operations',
+    items: [
+      {
+        to: '/admin/properties',
+        label: 'Property studio',
+        icon: Building2,
+        permission: 'properties.view',
+      },
+    ],
+  },
+  {
+    id: 'workspace',
+    label: 'Workspace',
+    items: [
+      {
+        to: '/admin/branches',
+        label: 'Branches',
+        icon: MapPin,
+        permission: 'branches.view',
+      },
+      {
+        to: '/admin/team',
+        label: 'Team',
+        icon: Users,
+        permission: 'team.view',
+      },
+      {
+        to: '/admin/roles',
+        label: 'Roles & permissions',
+        icon: ShieldCheck,
+        permission: 'roles.view',
+      },
+      {
+        to: '/admin/audit-logs',
+        label: 'Audit log',
+        icon: ScrollText,
+        permission: 'audit.view',
+      },
+      {
+        to: '/admin/settings',
+        label: 'Settings',
+        icon: Settings,
+        permission: 'settings.view',
+      },
+    ],
   },
 ];
 
@@ -24,6 +73,7 @@ export default function AdminLayout() {
   const navigate = useNavigate();
   const { user, company, roles, hasPermission, logout } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
   const menuRef = useRef(null);
 
@@ -56,14 +106,20 @@ export default function AdminLayout() {
     };
   }, [menuOpen]);
 
-  const visibleNav = NAV_ITEMS.filter((item) => hasPermission(item.permission));
-  const initials = (user?.name || '?')
-    .split(/\s+/)
-    .filter(Boolean)
-    .map((part) => part[0])
-    .slice(0, 2)
-    .join('')
-    .toUpperCase();
+  useEffect(() => {
+    if (!sidebarOpen) return undefined;
+    function handleKeyDown(event) {
+      if (event.key === 'Escape') setSidebarOpen(false);
+    }
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [sidebarOpen]);
+
+  const visibleGroups = NAV_GROUPS.map((group) => ({
+    ...group,
+    items: group.items.filter((item) => hasPermission(item.permission)),
+  })).filter((group) => group.items.length);
+
   const roleLabel = roles?.length ? roles.join(' · ') : 'Team member';
 
   async function handleSignOut() {
@@ -81,6 +137,20 @@ export default function AdminLayout() {
       <header className="admin-topbar">
         <div className="container admin-topbar__inner">
           <div className="admin-topbar__brand">
+            <button
+              type="button"
+              className="admin-menu-toggle"
+              onClick={() => setSidebarOpen((current) => !current)}
+              aria-label={sidebarOpen ? 'Close workspace menu' : 'Open workspace menu'}
+              aria-expanded={sidebarOpen}
+              aria-controls="admin-sidebar"
+            >
+              {sidebarOpen ? (
+                <X size={19} aria-hidden="true" />
+              ) : (
+                <Menu size={19} aria-hidden="true" />
+              )}
+            </button>
             <Logo />
             <span className="admin-topbar__divider" aria-hidden="true" />
             <span className="admin-topbar__label">
@@ -89,26 +159,10 @@ export default function AdminLayout() {
           </div>
 
           <div className="admin-topbar__actions">
-            <nav className="admin-topbar__nav" aria-label="Administration">
-              {visibleNav.map((item) => {
-                const Icon = item.icon;
-                return (
-                  <NavLink
-                    key={item.to}
-                    to={item.to}
-                    end
-                    className={({ isActive }) => (isActive ? 'is-active' : undefined)}
-                  >
-                    <Icon size={17} aria-hidden="true" />
-                    {item.label}
-                  </NavLink>
-                );
-              })}
-              <Link to="/">
-                <ExternalLink size={17} aria-hidden="true" />
-                View website
-              </Link>
-            </nav>
+            <Link className="admin-topbar__site" to="/">
+              <ExternalLink size={16} aria-hidden="true" />
+              <span>View website</span>
+            </Link>
 
             <div className="admin-user" ref={menuRef}>
               <button
@@ -119,7 +173,7 @@ export default function AdminLayout() {
                 aria-expanded={menuOpen}
               >
                 <span className="admin-user__avatar" aria-hidden="true">
-                  {initials}
+                  {initialsOf(user?.name) || '?'}
                 </span>
                 <span className="admin-user__meta">
                   <span className="admin-user__name">{user?.name || 'Account'}</span>
@@ -135,7 +189,7 @@ export default function AdminLayout() {
                     <p className="admin-user__summary-email">{user?.email}</p>
                     <p className="admin-user__summary-company">
                       <ShieldCheck size={13} aria-hidden="true" />
-                      {roleLabel}
+                      {company?.name || 'Company workspace'}
                     </p>
                   </div>
                   <div className="admin-user__divider" aria-hidden="true" />
@@ -160,9 +214,61 @@ export default function AdminLayout() {
         </div>
       </header>
 
-      <main id="main-content" className="admin-main" tabIndex="-1">
-        <Outlet />
-      </main>
+      <div className="admin-body">
+        <aside
+          id="admin-sidebar"
+          className={`admin-sidebar${sidebarOpen ? ' is-open' : ''}`}
+        >
+          <nav className="admin-sidebar__nav" aria-label="Workspace">
+            {visibleGroups.map((group) => (
+              <div className="admin-sidebar__group" key={group.id}>
+                <p className="admin-sidebar__title">{group.label}</p>
+                <ul>
+                  {group.items.map((item) => {
+                    const Icon = item.icon;
+                    return (
+                      <li key={item.to}>
+                        <NavLink
+                          to={item.to}
+                          className={({ isActive }) =>
+                            `admin-sidebar__link${isActive ? ' is-active' : ''}`
+                          }
+                          onClick={() => setSidebarOpen(false)}
+                        >
+                          <Icon size={17} aria-hidden="true" />
+                          <span>{item.label}</span>
+                        </NavLink>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            ))}
+          </nav>
+
+          <div className="admin-sidebar__footer">
+            <p className="admin-sidebar__company">{company?.name || 'Company workspace'}</p>
+            <p className="admin-sidebar__role">{roleLabel}</p>
+            <Link className="admin-sidebar__site" to="/">
+              <ExternalLink size={14} aria-hidden="true" />
+              Open public website
+            </Link>
+          </div>
+        </aside>
+
+        {sidebarOpen ? (
+          <button
+            type="button"
+            className="admin-sidebar__overlay"
+            aria-label="Close workspace menu"
+            onClick={() => setSidebarOpen(false)}
+          />
+        ) : null}
+
+        <main id="main-content" className="admin-main" tabIndex="-1">
+          <Outlet />
+        </main>
+      </div>
     </div>
   );
 }

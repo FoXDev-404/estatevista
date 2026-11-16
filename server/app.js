@@ -8,12 +8,20 @@ import { AuthService } from './auth/service.js';
 import { createAuthMiddleware } from './auth/middleware.js';
 import { SupabaseAuthRepository } from './auth/repository.js';
 import { createAuthRouter } from './routes/auth.js';
+import { createSettingsRouter } from './routes/settings.js';
+import { createBranchesRouter } from './routes/branches.js';
+import { createTeamRouter } from './routes/team.js';
+import { createRolesRouter } from './routes/roles.js';
+import { createAuditRouter } from './routes/audit.js';
+import { createLookupsRouter } from './routes/lookups.js';
 import { createPropertiesRouter } from './routes/properties.js';
 import { createEnquiriesRouter } from './routes/enquiries.js';
 import { createUploadRouter } from './routes/upload.js';
+import { SupabaseAdminRepository } from './admin/repository.js';
 
-export function createApp({ authRepository } = {}) {
+export function createApp({ authRepository, adminRepository } = {}) {
   const repository = authRepository || new SupabaseAuthRepository();
+  const admin = adminRepository || new SupabaseAdminRepository();
   const authService = new AuthService({
     repository,
     sessionSecret: config.sessionSecret,
@@ -38,6 +46,12 @@ export function createApp({ authRepository } = {}) {
   app.use(auth.attachAuth);
 
   app.use('/api/auth', createAuthRouter({ service: authService, auth }));
+  app.use('/api/settings', createSettingsRouter({ auth, repository: admin }));
+  app.use('/api/branches', createBranchesRouter({ auth, repository: admin }));
+  app.use('/api/team', createTeamRouter({ auth, repository: admin }));
+  app.use('/api/roles', createRolesRouter({ auth, repository: admin }));
+  app.use('/api/audit-logs', createAuditRouter({ auth, repository: admin }));
+  app.use('/api/lookups', createLookupsRouter({ auth, repository: admin }));
   app.use('/api/properties', createPropertiesRouter({ auth }));
   app.use('/api/enquiries', createEnquiriesRouter({ auth }));
   app.use('/api/upload', createUploadRouter({ auth }));
