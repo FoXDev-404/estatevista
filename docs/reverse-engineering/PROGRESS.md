@@ -100,7 +100,13 @@ Branch: `feat/r1-core-ops`. Work is tracked in `.superpowers/sdd/07-implementati
   - Client: project card list with type/status filters, project create/edit/detail tabs, buildings and floors, generated and single units, status modal, unit history, document upload/list/delete.
   - Verification: lint clean; client 74 tests / 12 files; server 62 tests / 9 files. Browser cycle covered project and building creation, generation of `A-101`…`A-202`, unit create/edit/status/history, building/floor delete guards, document upload/delete, unit delete, project delete `409`, and final cleanup deletes.
   - Fixed during verification: unit create/update wrote nonexistent actor columns; stale “correct the highlighted fields” alert after file selection; soft-deleted units blocking building/floor deletion via foreign key.
-- [ ] WP4 — CRM.
+- [x] WP4 — CRM.
+  - Server: `/api/leads` (list/search/stage/source/assignee/project filters, create, detail with follow-ups/visits/linked customer, edit, stage change, follow-ups, convert, delete), `/api/customers` (filters, CRUD, soft delete), `/api/visits` (upcoming/past, status/project/salesperson filters, lifecycle transitions, delete); permission-guarded and company-scoped. Lost stage requires a reason and clears it on reopen. Conversion creates one customer, links `lead_id`, marks the lead won and returns `409` on duplicates. Deleting a converted customer clears `lead_id` so the lead can be converted again.
+  - Migration `010_audit_events.sql` extends audit events with `status_changed`, `followup_added`, `followup_completed` and `converted`.
+  - Client: lead list filters and table, lead detail with stage stepper, activity timeline, follow-up/visit/stage/convert/delete modals; customer list and form; visits board with date/status/project/salesperson filters and lifecycle actions; audit log labels for CRM events.
+  - Verification: lint clean; client 79 tests / 13 files; server 76 tests / 10 files. Browser cycle covered project setup, lead creation and filters, lost-reason validation and reopen, follow-up create/complete, conversion, duplicate conversion `409`, customer create/edit/search/delete, visit scheduling from a lead, completed → reopen → cancelled → reopen → no-show, past-date filter, visit delete, “Open in customers” deep link, delete-customer then re-convert, and audit entries for CRM events.
+  - Fixed during verification: ambiguous `users` embeds in lead/visit/follow-up selects (explicit FK hints); missing `SupabaseAdminRepository.getLookup`; missing CRM audit event constraint values; converted-customer deletion leaving a stale `lead_id`.
+  - Quotation link from lead detail deferred to WP5 because the quotation route does not exist yet.
 - [ ] WP5 — Sales engine.
 - [ ] WP6 — Rental.
 - [ ] WP7 — Dashboard v1 and notifications.

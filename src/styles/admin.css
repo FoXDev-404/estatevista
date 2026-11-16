@@ -2434,3 +2434,429 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* --------------------------------------------------------------------------
+   CRM: leads, follow-up activity, visits and customers
+   -------------------------------------------------------------------------- */
+.crm-detail {
+  display: grid;
+  grid-template-columns: minmax(0, 1.65fr) minmax(280px, 1fr);
+  gap: 1.1rem;
+  align-items: start;
+}
+
+.crm-detail__main,
+.crm-detail__side {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+  min-width: 0;
+}
+
+.crm-panel__body {
+  padding: 1.1rem 1.15rem 1.25rem;
+}
+
+.crm-stepper {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 0.35rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.crm-step {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.4rem;
+  width: 100%;
+  padding: 0.55rem;
+  border: 1px solid var(--color-line);
+  background: var(--color-white);
+  color: var(--color-muted);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color var(--transition-fast),
+    background-color var(--transition-fast),
+    color var(--transition-fast);
+}
+
+.crm-step:hover:not(:disabled) {
+  border-color: var(--color-line-strong);
+  color: var(--color-ink);
+}
+
+.crm-step:disabled {
+  cursor: default;
+}
+
+.crm-step__index {
+  display: inline-flex;
+  width: 1.55rem;
+  height: 1.55rem;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--color-line-strong);
+  border-radius: 999px;
+  font-size: 0.58rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.crm-step__label {
+  font-size: 0.6rem;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.crm-step--done {
+  border-color: rgba(46, 106, 78, 0.24);
+}
+
+.crm-step--done .crm-step__index {
+  border-color: rgba(46, 106, 78, 0.24);
+  background: var(--color-success-bg);
+  color: var(--color-success);
+}
+
+.crm-step--current {
+  border-color: var(--color-gold-deep);
+  background: #fbf6ec;
+  color: var(--color-ink);
+  box-shadow: inset 0 -2px 0 var(--color-gold-deep);
+}
+
+.crm-step--current .crm-step__index {
+  border-color: var(--color-gold-deep);
+  background: var(--color-gold-deep);
+  color: var(--color-white);
+}
+
+.crm-stage-lost,
+.crm-stage-converted {
+  margin-top: 1rem;
+}
+
+.crm-stage-converted {
+  border-left: 3px solid var(--color-gold-deep);
+  background: #fbf6ec;
+}
+
+.crm-stage-converted a {
+  color: var(--color-gold-deep);
+  font-weight: 600;
+}
+
+.crm-timeline {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 1.15rem;
+  list-style: none;
+}
+
+.crm-timeline__item {
+  position: relative;
+  display: grid;
+  grid-template-columns: 2rem minmax(0, 1fr);
+  gap: 0.75rem;
+  padding-bottom: 1.2rem;
+}
+
+.crm-timeline__item:last-child {
+  padding-bottom: 0;
+}
+
+.crm-timeline__item:not(:last-child)::before {
+  position: absolute;
+  top: 2.1rem;
+  bottom: 0.15rem;
+  left: 0.97rem;
+  width: 1px;
+  background: var(--color-line);
+  content: '';
+}
+
+.crm-timeline__marker {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  width: 2rem;
+  height: 2rem;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--color-line-strong);
+  border-radius: 999px;
+  background: var(--color-ivory);
+  color: var(--color-gold-deep);
+}
+
+.crm-timeline__marker--visit {
+  border-color: rgba(46, 106, 78, 0.24);
+  background: var(--color-success-bg);
+  color: var(--color-success);
+}
+
+.crm-timeline__body {
+  min-width: 0;
+  padding-top: 0.12rem;
+}
+
+.crm-timeline__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.3rem 0.75rem;
+}
+
+.crm-timeline__header strong {
+  color: var(--color-ink);
+  font-size: 0.76rem;
+  line-height: 1.45;
+}
+
+.crm-timeline__meta {
+  margin-top: 0.16rem;
+  color: var(--color-muted);
+  font-size: 0.64rem;
+  line-height: 1.55;
+}
+
+.crm-timeline__notes {
+  margin-top: 0.5rem;
+  padding: 0.55rem 0.65rem;
+  border-left: 2px solid var(--color-line-strong);
+  background: var(--color-ivory);
+  color: var(--color-body);
+  font-size: 0.7rem;
+  line-height: 1.65;
+  white-space: pre-line;
+}
+
+.crm-timeline__outcome {
+  display: flex;
+  flex-direction: column;
+  gap: 0.12rem;
+  margin-top: 0.5rem;
+  color: var(--color-body);
+  font-size: 0.7rem;
+  line-height: 1.6;
+}
+
+.crm-timeline__outcome span {
+  color: var(--color-success);
+  font-size: 0.5rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.crm-timeline__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin-top: 0.65rem;
+}
+
+.crm-timeline-empty {
+  padding: 2rem 1.15rem;
+  color: var(--color-muted);
+  font-size: 0.7rem;
+  line-height: 1.7;
+  text-align: center;
+}
+
+.crm-timeline-empty p:first-child {
+  color: var(--color-ink);
+  font-weight: 600;
+}
+
+.crm-facts {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  margin: 0;
+  padding: 1rem 1.15rem 1.15rem;
+}
+
+.crm-facts > div {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.crm-facts dt {
+  color: var(--color-muted);
+  font-size: 0.51rem;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.crm-facts dd {
+  margin: 0;
+  color: var(--color-ink);
+  font-size: 0.72rem;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+
+.crm-facts a {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--color-gold-deep);
+  text-decoration: none;
+}
+
+.crm-facts a:hover {
+  text-decoration: underline;
+}
+
+.crm-notes {
+  padding: 0 1.15rem 1.15rem;
+}
+
+.crm-notes > span {
+  color: var(--color-muted);
+  font-size: 0.51rem;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.crm-notes p {
+  margin-top: 0.4rem;
+  padding-top: 0.65rem;
+  border-top: 1px solid var(--color-line);
+  color: var(--color-body);
+  font-size: 0.7rem;
+  line-height: 1.7;
+  white-space: pre-line;
+}
+
+.crm-visit-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.crm-visit-card {
+  display: grid;
+  grid-template-columns: 4.5rem minmax(0, 1fr);
+  gap: 1.1rem;
+  padding: 1.05rem 1.15rem;
+}
+
+.crm-visit-card + .crm-visit-card {
+  border-top: 1px solid var(--color-line);
+}
+
+.crm-visit-date {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.1rem;
+  padding: 0.55rem 0.4rem;
+  border: 1px solid var(--color-line);
+  background: var(--color-ivory);
+  text-align: center;
+}
+
+.crm-visit-date__day {
+  color: var(--color-ink);
+  font-family: var(--font-display);
+  font-size: 1.65rem;
+  line-height: 1;
+}
+
+.crm-visit-date__month {
+  color: var(--color-gold-deep);
+  font-size: 0.52rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+}
+
+.crm-visit-date__time {
+  color: var(--color-muted);
+  font-size: 0.58rem;
+  line-height: 1.4;
+}
+
+.crm-visit-card__body {
+  min-width: 0;
+}
+
+.crm-visit-card__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+}
+
+.crm-visit-card__title {
+  font-size: 1.05rem;
+  line-height: 1.25;
+}
+
+.crm-visit-card__title a {
+  color: var(--color-ink);
+  text-decoration: none;
+}
+
+.crm-visit-card__title a:hover {
+  color: var(--color-gold-deep);
+}
+
+.crm-visit-card__meta {
+  margin-top: 0.16rem;
+  color: var(--color-muted);
+  font-size: 0.64rem;
+  line-height: 1.55;
+}
+
+.crm-visit-card__notes {
+  margin-top: 0.55rem;
+  color: var(--color-body);
+  font-size: 0.7rem;
+  line-height: 1.65;
+  white-space: pre-line;
+}
+
+.crm-visit-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin-top: 0.65rem;
+}
+
+@media (max-width: 1024px) {
+  .crm-detail {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .crm-detail__side {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .crm-stepper {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .crm-visit-card {
+    grid-template-columns: 3.6rem minmax(0, 1fr);
+    gap: 0.8rem;
+  }
+
+  .crm-visit-date__day {
+    font-size: 1.3rem;
+  }
+}

@@ -12,6 +12,13 @@ function emptyToNull(value) {
   return value === '' || value === undefined ? null : value;
 }
 
+const LEAD_SELECT =
+  '*, source:lookups(id, name), assigned_user:users!leads_assigned_to_fkey(id, name, email), project:projects(id, name), unit:units(id, unit_number, status)';
+const CUSTOMER_SELECT = '*, source:lookups(id, name), lead:leads(id, name)';
+const VISIT_SELECT =
+  '*, lead:leads(id, name), customer:customers(id, name), project:projects(id, name), unit:units(id, unit_number), salesperson:users!visits_salesperson_id_fkey(id, name)';
+const FOLLOWUP_SELECT = '*, created_by_user:users!lead_followups_created_by_fkey(id, name)';
+
 /**
  * Supabase-backed persistence for company settings, branches, team, roles and
  * the audit view. Routes own validation and permission checks; this class owns
@@ -1185,38 +1192,338 @@ export class SupabaseAdminRepository {
     if (error) fail('deleteDocument', error);
   }
 
-  async getLookups(companyId) {
-    const [branchesResult, rolesResult, usersResult, unitTypesResult] = await Promise.all([
+  // --- CRM: leads, follow-ups, customers and visits -------------------
+
+  async listLeads(companyId) {
+    const [leadsResult, followupsResult] = await Promise.all([
       this.client()
-        .from('branches')
-        .select('id, name, code, is_active')
+        .from('leads')
+        .select(LEAD_SELECT)
         .eq('company_id', companyId)
-        .order('name'),
-      this.client().from('roles').select('id, name, is_default').eq('company_id', companyId).order('name'),
+        .is('deleted_at', null)
+        .order('updated_at', { ascending: false }),
       this.client()
-        .from('users')
-        .select('id, name, email, is_active, full_access, branch_id')
+        .from('lead_followups')
+        .select('lead_id, scheduled_at')
         .eq('company_id', companyId)
-        .order('name'),
-      this.client()
-        .from('unit_types')
-        .select('id, name, sort_order, is_active')
-        .eq('company_id', companyId)
-        .eq('is_active', true)
-        .order('sort_order')
-        .order('name'),
+        .is('completed_at', null)
+        .not('scheduled_at', 'is', null)
+        .order('scheduled_at'),
     ]);
+    if (leadsResult.error) fail('listLeads', leadsResult.error);
+    if (followupsResult.error) fail('listLeadFollowups', followupsResult.error);
+
+    const nextFollowup = new Map();
+    for (const row of followupsResult.data || []) {
+      if (!nextFollowup.has(row.lead_id)) nextFollowup.set(row.lead_id, row.scheduled_at);
+    }
+
+    return (leadsResult.data || []).map((lead) => ({
+      ...lead,
+      next_followup_at: nextFollowup.get(lead.id) || null,
+    }));
+  }
+
+  async getLead(companyId, id) {
+    const { data, error } = await this.client()
+      .from('leads')
+      .select(LEAD_SELECT)
+      .eq('company_id', companyId)
+      .eq('id', id)
+      .is('deleted_at', null)
+      .maybeSingle();
+    if (error) fail('getLead', error);
+    if (!data) return null;
+
+    const { data: followup, error: followupError } = await this.client()
+      .from('lead_followups')
+      .select('scheduled_at')
+      .eq('company_id', companyId)
+      .eq('lead_id', id)
+      .is('completed_at', null)
+      .not('scheduled_at', 'is', null)
+      .order('scheduled_at')
+      .limit(1)
+      .maybeSingle();
+    if (followupError) fail('getLeadFollowup', followupError);
+
+    return { ...data, next_followup_at: followup?.scheduled_at || null };
+  }
+
+  async createLead(companyId, patch) {
+    const { data, error } = await this.client()
+      .from('leads')
+      .insert({ company_id: companyId, ...patch })
+      .select('id')
+      .single();
+    if (error) fail('createLead', error);
+    return this.getLead(companyId, data.id);
+  }
+
+  async updateLead(companyId, id, patch) {
+    const { data, error } = await this.client()
+      .from('leads')
+      .update({ ...patch, updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .eq('company_id', companyId)
+      .is('deleted_at', null)
+      .select('id')
+      .maybeSingle();
+    if (error) fail('updateLead', error);
+    if (!data) throw notFound('Lead not found.');
+    return this.getLead(companyId, data.id);
+  }
+
+  async deleteLead(companyId, id) {
+    const { data, error } = await this.client()
+      .from('leads')
+      .update({ deleted_at: new Date().toISOString() })
+      .eq('id', id)
+      .eq('company_id', companyId)
+      .is('deleted_at', null)
+      .select('id')
+      .maybeSingle();
+    if (error) fail('deleteLead', error);
+    if (!data) throw notFound('Lead not found.');
+  }
+
+  async listLeadFollowups(companyId, leadId) {
+    const { data, error } = await this.client()
+      .from('lead_followups')
+      .select(FOLLOWUP_SELECT)
+      .eq('company_id', companyId)
+      .eq('lead_id', leadId)
+      .order('created_at');
+    if (error) fail('listLeadFollowups', error);
+    return data || [];
+  }
+
+  async getLeadFollowup(companyId, id) {
+    const { data, error } = await this.client()
+      .from('lead_followups')
+      .select(FOLLOWUP_SELECT)
+      .eq('company_id', companyId)
+      .eq('id', id)
+      .maybeSingle();
+    if (error) fail('getLeadFollowup', error);
+    return data || null;
+  }
+
+  async createLeadFollowup(companyId, leadId, patch) {
+    const { data, error } = await this.client()
+      .from('lead_followups')
+      .insert({ company_id: companyId, lead_id: leadId, ...patch })
+      .select('id')
+      .single();
+    if (error) fail('createLeadFollowup', error);
+    return this.getLeadFollowup(companyId, data.id);
+  }
+
+  async updateLeadFollowup(companyId, leadId, followupId, patch) {
+    const { data, error } = await this.client()
+      .from('lead_followups')
+      .update(patch)
+      .eq('id', followupId)
+      .eq('lead_id', leadId)
+      .eq('company_id', companyId)
+      .select('id')
+      .maybeSingle();
+    if (error) fail('updateLeadFollowup', error);
+    return data ? this.getLeadFollowup(companyId, data.id) : null;
+  }
+
+  customerWithTotals(row) {
+    if (!row) return null;
+    // Sales and installment data arrives with WP5; the list columns stay at 0.
+    return { ...row, units_bought: 0, balance_due: 0 };
+  }
+
+  async listCustomers(companyId) {
+    const { data, error } = await this.client()
+      .from('customers')
+      .select(CUSTOMER_SELECT)
+      .eq('company_id', companyId)
+      .is('deleted_at', null)
+      .order('name');
+    if (error) fail('listCustomers', error);
+    return (data || []).map((row) => this.customerWithTotals(row));
+  }
+
+  async getCustomer(companyId, id) {
+    const { data, error } = await this.client()
+      .from('customers')
+      .select(CUSTOMER_SELECT)
+      .eq('company_id', companyId)
+      .eq('id', id)
+      .is('deleted_at', null)
+      .maybeSingle();
+    if (error) fail('getCustomer', error);
+    return this.customerWithTotals(data);
+  }
+
+  async findCustomerByLead(companyId, leadId) {
+    const { data, error } = await this.client()
+      .from('customers')
+      .select('id, name')
+      .eq('company_id', companyId)
+      .eq('lead_id', leadId)
+      .is('deleted_at', null)
+      .maybeSingle();
+    if (error) fail('findCustomerByLead', error);
+    return data || null;
+  }
+
+  async createCustomer(companyId, patch) {
+    const { data, error } = await this.client()
+      .from('customers')
+      .insert({ company_id: companyId, ...patch })
+      .select('id')
+      .single();
+    if (error) {
+      if (error.code === '23505') {
+        throw new ApiError(409, 'This lead has already been converted to a customer.');
+      }
+      fail('createCustomer', error);
+    }
+    return this.getCustomer(companyId, data.id);
+  }
+
+  async updateCustomer(companyId, id, patch) {
+    const { data, error } = await this.client()
+      .from('customers')
+      .update({ ...patch, updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .eq('company_id', companyId)
+      .is('deleted_at', null)
+      .select('id')
+      .maybeSingle();
+    if (error) fail('updateCustomer', error);
+    if (!data) throw notFound('Customer not found.');
+    return this.getCustomer(companyId, data.id);
+  }
+
+  async deleteCustomer(companyId, id) {
+    const { data, error } = await this.client()
+      .from('customers')
+      .update({ deleted_at: new Date().toISOString(), lead_id: null })
+      .eq('id', id)
+      .eq('company_id', companyId)
+      .is('deleted_at', null)
+      .select('id')
+      .maybeSingle();
+    if (error) fail('deleteCustomer', error);
+    if (!data) throw notFound('Customer not found.');
+  }
+
+  async listVisits(companyId) {
+    const { data, error } = await this.client()
+      .from('visits')
+      .select(VISIT_SELECT)
+      .eq('company_id', companyId)
+      .order('scheduled_at');
+    if (error) fail('listVisits', error);
+    return data || [];
+  }
+
+  async getVisit(companyId, id) {
+    const { data, error } = await this.client()
+      .from('visits')
+      .select(VISIT_SELECT)
+      .eq('company_id', companyId)
+      .eq('id', id)
+      .maybeSingle();
+    if (error) fail('getVisit', error);
+    return data || null;
+  }
+
+  async createVisit(companyId, patch) {
+    const { data, error } = await this.client()
+      .from('visits')
+      .insert({ company_id: companyId, ...patch })
+      .select('id')
+      .single();
+    if (error) fail('createVisit', error);
+    return this.getVisit(companyId, data.id);
+  }
+
+  async updateVisit(companyId, id, patch) {
+    const { data, error } = await this.client()
+      .from('visits')
+      .update({ ...patch, updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .eq('company_id', companyId)
+      .select('id')
+      .maybeSingle();
+    if (error) fail('updateVisit', error);
+    if (!data) throw notFound('Visit not found.');
+    return this.getVisit(companyId, data.id);
+  }
+
+  async deleteVisit(companyId, id) {
+    const { error } = await this.client()
+      .from('visits')
+      .delete()
+      .eq('id', id)
+      .eq('company_id', companyId);
+    if (error) fail('deleteVisit', error);
+  }
+
+  async getLookup(companyId, id, listKey = null) {
+    let query = this.client()
+      .from('lookups')
+      .select('id, name, list_key, color, sort_order, is_active')
+      .eq('company_id', companyId)
+      .eq('id', id)
+      .eq('is_active', true);
+    if (listKey) query = query.eq('list_key', listKey);
+    const { data, error } = await query.maybeSingle();
+    if (error) fail('getLookup', error);
+    return data || null;
+  }
+
+  async getLookups(companyId) {
+    const [branchesResult, rolesResult, usersResult, unitTypesResult, sourcesResult] =
+      await Promise.all([
+        this.client()
+          .from('branches')
+          .select('id, name, code, is_active')
+          .eq('company_id', companyId)
+          .order('name'),
+        this.client().from('roles').select('id, name, is_default').eq('company_id', companyId).order('name'),
+        this.client()
+          .from('users')
+          .select('id, name, email, is_active, full_access, branch_id')
+          .eq('company_id', companyId)
+          .order('name'),
+        this.client()
+          .from('unit_types')
+          .select('id, name, sort_order, is_active')
+          .eq('company_id', companyId)
+          .eq('is_active', true)
+          .order('sort_order')
+          .order('name'),
+        this.client()
+          .from('lookups')
+          .select('id, name, sort_order')
+          .eq('company_id', companyId)
+          .eq('list_key', 'source')
+          .eq('is_active', true)
+          .order('sort_order')
+          .order('name'),
+      ]);
 
     if (branchesResult.error) fail('lookupBranches', branchesResult.error);
     if (rolesResult.error) fail('lookupRoles', rolesResult.error);
     if (usersResult.error) fail('lookupUsers', usersResult.error);
     if (unitTypesResult.error) fail('lookupUnitTypes', unitTypesResult.error);
+    if (sourcesResult.error) fail('lookupSources', sourcesResult.error);
 
     return {
       branches: branchesResult.data || [],
       roles: rolesResult.data || [],
       users: usersResult.data || [],
       unit_types: unitTypesResult.data || [],
+      sources: sourcesResult.data || [],
     };
   }
 

@@ -17,6 +17,10 @@ import AdminProjects from '../pages/admin/AdminProjects';
 import AdminProjectForm from '../pages/admin/AdminProjectForm';
 import AdminProjectDetail from '../pages/admin/AdminProjectDetail';
 import AdminUnits from '../pages/admin/AdminUnits';
+import AdminLeads from '../pages/admin/AdminLeads';
+import AdminLeadDetail from '../pages/admin/AdminLeadDetail';
+import AdminVisits from '../pages/admin/AdminVisits';
+import AdminCustomers from '../pages/admin/AdminCustomers';
 import AdminSettings from '../pages/admin/AdminSettings';
 import AdminBranches from '../pages/admin/AdminBranches';
 import AdminTeam from '../pages/admin/AdminTeam';
@@ -104,6 +108,38 @@ export default function AppRoutes() {
             element={
               <ProtectedRoute permission="units.view">
                 <AdminUnits />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="leads"
+            element={
+              <ProtectedRoute permission="leads.view">
+                <AdminLeads />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="leads/:id"
+            element={
+              <ProtectedRoute permission="leads.view">
+                <AdminLeadDetail />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="visits"
+            element={
+              <ProtectedRoute permission="visits.view">
+                <AdminVisits />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="customers"
+            element={
+              <ProtectedRoute permission="customers.view">
+                <AdminCustomers />
               </ProtectedRoute>
             }
           />

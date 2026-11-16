@@ -12,7 +12,20 @@ const dateString = z
 const filterSchema = z.object({
   user_id: z.string().uuid('Choose a valid user.').optional(),
   module: z.string().trim().max(100).optional(),
-  event: z.enum(['created', 'updated', 'deleted', 'login', 'logout', 'password_changed']).optional(),
+  event: z
+    .enum([
+      'created',
+      'updated',
+      'deleted',
+      'login',
+      'logout',
+      'password_changed',
+      'status_changed',
+      'followup_added',
+      'followup_completed',
+      'converted',
+    ])
+    .optional(),
   date_from: dateString.optional(),
   date_to: dateString.optional(),
 });
@@ -57,6 +70,10 @@ export function createAuditRouter({ auth, repository }) {
             { value: 'login', label: 'Signed in' },
             { value: 'logout', label: 'Signed out' },
             { value: 'password_changed', label: 'Password changed' },
+            { value: 'status_changed', label: 'Status changed' },
+            { value: 'followup_added', label: 'Follow-up added' },
+            { value: 'followup_completed', label: 'Follow-up completed' },
+            { value: 'converted', label: 'Converted' },
           ],
         },
       });

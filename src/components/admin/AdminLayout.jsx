@@ -2,7 +2,9 @@ import { useEffect, useRef, useState } from 'react';
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
   Building2,
+  CalendarDays,
   ChevronDown,
+  Contact,
   ExternalLink,
   LayoutGrid,
   LogOut,
@@ -11,6 +13,7 @@ import {
   ScrollText,
   Settings,
   ShieldCheck,
+  UserPlus,
   Users,
   X,
 } from 'lucide-react';
@@ -40,6 +43,24 @@ const NAV_GROUPS = [
         label: 'Units',
         icon: LayoutGrid,
         permission: 'units.view',
+      },
+      {
+        to: '/admin/leads',
+        label: 'Leads',
+        icon: UserPlus,
+        permission: 'leads.view',
+      },
+      {
+        to: '/admin/visits',
+        label: 'Visits',
+        icon: CalendarDays,
+        permission: 'visits.view',
+      },
+      {
+        to: '/admin/customers',
+        label: 'Customers',
+        icon: Contact,
+        permission: 'customers.view',
       },
     ],
   },

@@ -4,6 +4,7 @@ import { DEFAULT_ROLES, PERMISSIONS } from './auth/permissions.js';
 import { hashPassword } from './auth/password.js';
 import { SEQUENCE_DEFINITIONS } from './admin/catalog.js';
 import { DEFAULT_UNIT_TYPES } from './lib/inventory.js';
+import { DEFAULT_LEAD_SOURCES } from './lib/crm.js';
 
 async function upsertPermissions() {
   const { error } = await supabase
@@ -86,6 +87,19 @@ async function seedSettingsAndSequences(companyId) {
     .from('unit_types')
     .upsert(unitTypes, { onConflict: 'company_id,name', ignoreDuplicates: true });
   if (unitTypeError) throw new Error(`unit types: ${unitTypeError.message}`);
+
+  const sources = DEFAULT_LEAD_SOURCES.map((name, index) => ({
+    company_id: companyId,
+    list_key: 'source',
+    name,
+    sort_order: index + 1,
+    is_default: index === 0,
+  }));
+
+  const { error: sourceError } = await supabase
+    .from('lookups')
+    .upsert(sources, { onConflict: 'company_id,list_key,name', ignoreDuplicates: true });
+  if (sourceError) throw new Error(`lead sources: ${sourceError.message}`);
 }
 
 async function seedRoles(companyId, permissions) {

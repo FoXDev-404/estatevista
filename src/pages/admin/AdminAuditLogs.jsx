@@ -28,6 +28,10 @@ const EVENT_LABELS = {
   login: 'Signed in',
   logout: 'Signed out',
   password_changed: 'Password changed',
+  status_changed: 'Status changed',
+  followup_added: 'Follow-up added',
+  followup_completed: 'Follow-up completed',
+  converted: 'Converted',
 };
 
 const EVENT_BADGES = {
@@ -37,6 +41,10 @@ const EVENT_BADGES = {
   login: 'admin-badge--active',
   logout: 'admin-badge--muted',
   password_changed: 'admin-badge--gold',
+  status_changed: 'admin-badge--gold',
+  followup_added: 'admin-badge--active',
+  followup_completed: 'admin-badge--success',
+  converted: 'admin-badge--success',
 };
 
 const FALLBACK_EVENTS = Object.entries(EVENT_LABELS).map(([value, label]) => ({ value, label }));

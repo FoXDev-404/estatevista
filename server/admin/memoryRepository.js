@@ -20,6 +20,11 @@ export class MemoryAdminRepository {
     unitTypes = [],
     units = [],
     documents = [],
+    lookups = [],
+    leads = [],
+    customers = [],
+    leadFollowups = [],
+    visits = [],
     team = [],
     roles = [],
     rolePermissions = {},
@@ -34,6 +39,11 @@ export class MemoryAdminRepository {
     this.unitTypes = unitTypes.map((row) => ({ ...row }));
     this.units = units.map((row) => ({ ...row }));
     this.documents = documents.map((row) => ({ ...row }));
+    this.lookups = lookups.map((row) => ({ ...row }));
+    this.leads = leads.map((row) => ({ ...row }));
+    this.customers = customers.map((row) => ({ ...row }));
+    this.leadFollowups = leadFollowups.map((row) => ({ ...row }));
+    this.visits = visits.map((row) => ({ ...row }));
     this.unitStatusHistory = [];
     this.unitContracts = new Map();
     this.team = team.map((row) => ({ ...row, roles: [...(row.roles || [])] }));
@@ -530,6 +540,313 @@ export class MemoryAdminRepository {
     );
   }
 
+  // --- CRM: leads, follow-ups, customers and visits -------------------
+
+  getLookup(companyId, id, listKey = null) {
+    return (
+      this.lookups.find(
+        (row) =>
+          row.company_id === companyId &&
+          row.id === id &&
+          (!listKey || row.list_key === listKey) &&
+          row.is_active !== false,
+      ) || null
+    );
+  }
+
+  leadSummary(companyId, lead) {
+    const project = this.projects.find((row) => row.id === lead.project_id) || null;
+    const unit = this.units.find((row) => row.id === lead.unit_id && !row.deleted_at) || null;
+    const source = this.lookups.find((row) => row.id === lead.source_id) || null;
+    const assigned = this.team.find((row) => row.id === lead.assigned_to) || null;
+    return {
+      ...lead,
+      project: project ? { id: project.id, name: project.name } : null,
+      unit: unit ? { id: unit.id, unit_number: unit.unit_number, status: unit.status } : null,
+      source: source ? { id: source.id, name: source.name } : null,
+      assigned_user: assigned
+        ? { id: assigned.id, name: assigned.name, email: assigned.email }
+        : null,
+    };
+  }
+
+  async listLeads(companyId) {
+    return this.leads
+      .filter((row) => row.company_id === companyId && !row.deleted_at)
+      .map((row) => this.leadWithNextFollowup(companyId, row))
+      .sort((a, b) => String(b.updated_at).localeCompare(String(a.updated_at)));
+  }
+
+  async getLead(companyId, id) {
+    const lead = this.leads.find(
+      (row) => row.company_id === companyId && row.id === id && !row.deleted_at,
+    );
+    if (!lead) return null;
+    return this.leadWithNextFollowup(companyId, lead);
+  }
+
+  leadWithNextFollowup(companyId, lead) {
+    const next = this.leadFollowups
+      .filter(
+        (row) =>
+          row.company_id === companyId &&
+          row.lead_id === lead.id &&
+          !row.completed_at &&
+          row.scheduled_at,
+      )
+      .map((row) => row.scheduled_at)
+      .sort()[0];
+    return { ...this.leadSummary(companyId, lead), next_followup_at: next || null };
+  }
+
+  async createLead(companyId, patch) {
+    const row = {
+      id: randomUUID(),
+      company_id: companyId,
+      branch_id: patch.branch_id ?? null,
+      source_id: patch.source_id ?? null,
+      assigned_to: patch.assigned_to ?? null,
+      project_id: patch.project_id ?? null,
+      unit_id: patch.unit_id ?? null,
+      name: patch.name,
+      phone: patch.phone ?? null,
+      email: patch.email ?? null,
+      status: patch.status ?? 'new',
+      lost_reason: patch.lost_reason ?? null,
+      budget_min: patch.budget_min ?? null,
+      budget_max: patch.budget_max ?? null,
+      notes: patch.notes ?? null,
+      created_by: patch.created_by ?? null,
+      updated_by: patch.updated_by ?? null,
+      deleted_at: null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    this.leads.push(row);
+    return this.getLead(companyId, row.id);
+  }
+
+  async updateLead(companyId, id, patch) {
+    const lead = this.leads.find(
+      (row) => row.company_id === companyId && row.id === id && !row.deleted_at,
+    );
+    if (!lead) throw notFound('Lead not found.');
+    Object.assign(lead, patch, { updated_at: new Date().toISOString() });
+    return this.getLead(companyId, id);
+  }
+
+  async deleteLead(companyId, id) {
+    const lead = this.leads.find(
+      (row) => row.company_id === companyId && row.id === id && !row.deleted_at,
+    );
+    if (!lead) throw notFound('Lead not found.');
+    lead.deleted_at = new Date().toISOString();
+    lead.updated_at = lead.deleted_at;
+  }
+
+  async listLeadFollowups(companyId, leadId) {
+    return this.leadFollowups
+      .filter((row) => row.company_id === companyId && row.lead_id === leadId)
+      .map((row) => ({
+        ...row,
+        created_by_user: this.team.find((member) => member.id === row.created_by) || null,
+      }))
+      .sort((a, b) => String(a.created_at).localeCompare(String(b.created_at)));
+  }
+
+  async createLeadFollowup(companyId, leadId, patch) {
+    const row = {
+      id: randomUUID(),
+      company_id: companyId,
+      lead_id: leadId,
+      type: patch.type ?? 'note',
+      scheduled_at: patch.scheduled_at ?? null,
+      completed_at: null,
+      outcome: null,
+      notes: patch.notes ?? null,
+      created_by: patch.created_by ?? null,
+      created_at: new Date().toISOString(),
+    };
+    this.leadFollowups.push(row);
+    return {
+      ...row,
+      created_by_user: this.team.find((member) => member.id === row.created_by) || null,
+    };
+  }
+
+  async updateLeadFollowup(companyId, leadId, followupId, patch) {
+    const followup = this.leadFollowups.find(
+      (row) =>
+        row.company_id === companyId && row.lead_id === leadId && row.id === followupId,
+    );
+    if (!followup) throw notFound('Follow-up not found.');
+    Object.assign(followup, patch);
+    if (patch.completed_at !== undefined) {
+      followup.completed_at = patch.completed_at;
+    }
+    return {
+      ...followup,
+      created_by_user: this.team.find((member) => member.id === followup.created_by) || null,
+    };
+  }
+
+  customerSummary(companyId, customer) {
+    const source = this.lookups.find((row) => row.id === customer.source_id) || null;
+    const lead = this.leads.find((row) => row.id === customer.lead_id) || null;
+    return {
+      ...customer,
+      source: source ? { id: source.id, name: source.name } : null,
+      lead: lead ? { id: lead.id, name: lead.name } : null,
+      // Sales and installment data arrives with WP5; keep the list columns at 0.
+      units_bought: 0,
+      balance_due: 0,
+    };
+  }
+
+  async listCustomers(companyId) {
+    return this.customers
+      .filter((row) => row.company_id === companyId && !row.deleted_at)
+      .map((row) => this.customerSummary(companyId, row))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }
+
+  async getCustomer(companyId, id) {
+    const customer = this.customers.find(
+      (row) => row.company_id === companyId && row.id === id && !row.deleted_at,
+    );
+    return customer ? this.customerSummary(companyId, customer) : null;
+  }
+
+  async findCustomerByLead(companyId, leadId) {
+    const customer = this.customers.find(
+      (row) => row.company_id === companyId && row.lead_id === leadId && !row.deleted_at,
+    );
+    return customer ? this.customerSummary(companyId, customer) : null;
+  }
+
+  async createCustomer(companyId, patch) {
+    if (patch.lead_id) {
+      const existing = this.customers.find(
+        (row) => row.company_id === companyId && row.lead_id === patch.lead_id,
+      );
+      if (existing) {
+        throw new ApiError(409, 'This lead has already been converted to a customer.');
+      }
+    }
+    const row = {
+      id: randomUUID(),
+      company_id: companyId,
+      lead_id: patch.lead_id ?? null,
+      source_id: patch.source_id ?? null,
+      name: patch.name,
+      type: patch.type ?? 'individual',
+      phone: patch.phone ?? null,
+      alternate_phone: patch.alternate_phone ?? null,
+      email: patch.email ?? null,
+      national_id: patch.national_id ?? null,
+      date_of_birth: patch.date_of_birth ?? null,
+      occupation: patch.occupation ?? null,
+      address: patch.address ?? null,
+      city: patch.city ?? null,
+      country: patch.country ?? null,
+      is_active: patch.is_active ?? true,
+      created_by: patch.created_by ?? null,
+      updated_by: patch.updated_by ?? null,
+      deleted_at: null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    this.customers.push(row);
+    return this.getCustomer(companyId, row.id);
+  }
+
+  async updateCustomer(companyId, id, patch) {
+    const customer = this.customers.find(
+      (row) => row.company_id === companyId && row.id === id && !row.deleted_at,
+    );
+    if (!customer) throw notFound('Customer not found.');
+    Object.assign(customer, patch, { updated_at: new Date().toISOString() });
+    return this.getCustomer(companyId, id);
+  }
+
+  async deleteCustomer(companyId, id) {
+    const customer = this.customers.find(
+      (row) => row.company_id === companyId && row.id === id && !row.deleted_at,
+    );
+    if (!customer) throw notFound('Customer not found.');
+    customer.deleted_at = new Date().toISOString();
+    customer.updated_at = customer.deleted_at;
+    customer.lead_id = null;
+  }
+
+  visitSummary(companyId, visit) {
+    const lead = this.leads.find((row) => row.id === visit.lead_id) || null;
+    const customer = this.customers.find((row) => row.id === visit.customer_id) || null;
+    const project = this.projects.find((row) => row.id === visit.project_id) || null;
+    const unit = this.units.find((row) => row.id === visit.unit_id && !row.deleted_at) || null;
+    const salesperson = this.team.find((row) => row.id === visit.salesperson_id) || null;
+    return {
+      ...visit,
+      lead: lead ? { id: lead.id, name: lead.name } : null,
+      customer: customer ? { id: customer.id, name: customer.name } : null,
+      project: project ? { id: project.id, name: project.name } : null,
+      unit: unit ? { id: unit.id, unit_number: unit.unit_number } : null,
+      salesperson: salesperson
+        ? { id: salesperson.id, name: salesperson.name }
+        : null,
+    };
+  }
+
+  async listVisits(companyId, filters = {}) {
+    return this.visits
+      .filter((row) => row.company_id === companyId)
+      .filter((row) => !filters.leadId || row.lead_id === filters.leadId)
+      .filter((row) => !filters.customerId || row.customer_id === filters.customerId)
+      .filter((row) => !filters.projectId || row.project_id === filters.projectId)
+      .filter((row) => !filters.salespersonId || row.salesperson_id === filters.salespersonId)
+      .filter((row) => !filters.status || row.status === filters.status)
+      .map((row) => this.visitSummary(companyId, row))
+      .sort((a, b) => String(a.scheduled_at).localeCompare(String(b.scheduled_at)));
+  }
+
+  async getVisit(companyId, id) {
+    const visit = this.visits.find((row) => row.company_id === companyId && row.id === id);
+    return visit ? this.visitSummary(companyId, visit) : null;
+  }
+
+  async createVisit(companyId, patch) {
+    const row = {
+      id: randomUUID(),
+      company_id: companyId,
+      lead_id: patch.lead_id ?? null,
+      customer_id: patch.customer_id ?? null,
+      project_id: patch.project_id ?? null,
+      unit_id: patch.unit_id ?? null,
+      salesperson_id: patch.salesperson_id ?? null,
+      scheduled_at: patch.scheduled_at,
+      status: patch.status ?? 'scheduled',
+      notes: patch.notes ?? null,
+      created_by: patch.created_by ?? null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    this.visits.push(row);
+    return this.getVisit(companyId, row.id);
+  }
+
+  async updateVisit(companyId, id, patch) {
+    const visit = this.visits.find((row) => row.company_id === companyId && row.id === id);
+    if (!visit) throw notFound('Visit not found.');
+    Object.assign(visit, patch, { updated_at: new Date().toISOString() });
+    return this.getVisit(companyId, id);
+  }
+
+  async deleteVisit(companyId, id) {
+    this.visits = this.visits.filter(
+      (row) => !(row.company_id === companyId && row.id === id),
+    );
+  }
+
   async listBranches(companyId) {
     const companyTeam = this.team.filter((row) => row.company_id === companyId);
     return this.branches
@@ -815,6 +1132,13 @@ export class MemoryAdminRepository {
         })),
       unit_types: this.unitTypes
         .filter((row) => row.company_id === companyId && row.is_active !== false)
+        .map((row) => ({ id: row.id, name: row.name, sort_order: row.sort_order }))
+        .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0) || a.name.localeCompare(b.name)),
+      sources: this.lookups
+        .filter(
+          (row) =>
+            row.company_id === companyId && row.list_key === 'source' && row.is_active !== false,
+        )
         .map((row) => ({ id: row.id, name: row.name, sort_order: row.sort_order }))
         .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0) || a.name.localeCompare(b.name)),
     };
