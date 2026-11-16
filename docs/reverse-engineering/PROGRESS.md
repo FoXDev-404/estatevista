@@ -2,7 +2,7 @@
 
 Target: https://estateflow.devintime.com (company panel, demo account only)
 Started: 2026-11-16
-Updated: 2026-11-16
+Updated: 2026-11-17
 
 ## Phase 0 — My project (complete)
 
@@ -106,8 +106,15 @@ Branch: `feat/r1-core-ops`. Work is tracked in `.superpowers/sdd/07-implementati
   - Client: lead list filters and table, lead detail with stage stepper, activity timeline, follow-up/visit/stage/convert/delete modals; customer list and form; visits board with date/status/project/salesperson filters and lifecycle actions; audit log labels for CRM events.
   - Verification: lint clean; client 79 tests / 13 files; server 76 tests / 10 files. Browser cycle covered project setup, lead creation and filters, lost-reason validation and reopen, follow-up create/complete, conversion, duplicate conversion `409`, customer create/edit/search/delete, visit scheduling from a lead, completed → reopen → cancelled → reopen → no-show, past-date filter, visit delete, “Open in customers” deep link, delete-customer then re-convert, and audit entries for CRM events.
   - Fixed during verification: ambiguous `users` embeds in lead/visit/follow-up selects (explicit FK hints); missing `SupabaseAdminRepository.getLookup`; missing CRM audit event constraint values; converted-customer deletion leaving a stale `lead_id`.
-  - Quotation link from lead detail deferred to WP5 because the quotation route does not exist yet.
-- [ ] WP5 — Sales engine.
+  - Quotation link from lead detail was deferred to WP5 and delivered there.
+- [x] WP5 — Sales engine.
+  - Server: `/api/quotations` (list/search/status/project, create, edit, status transitions, convert), `/api/reservations` (list, create, convert, cancel), `/api/sales` (list/search/status/project/salesperson, create, detail, update, cancel, handover, installment reschedule/waive/pay), `/api/installments` (aging filters and summary), `/api/receipts` (list, create with allocation, detail, void), `/api/commissions` (rule CRUD/toggle, ledger list and status transitions); all company-scoped and permission-guarded.
+  - Schedule math keeps rounding on the final installment; down payment is collected at sale creation; full payment creates one installment on the agreement date. Reservation expiry/cancel releases the unit; cancellation releases the unit and cancels installments and commissions. Receipt allocations must equal the receipt amount and never exceed an installment balance. Handover requires zero open schedule balance.
+  - Migration `011_sales_defaults.sql` adds sales/commission defaults; applied via Supabase MCP and verified (`late_fee_type='none'`, receipt post/void functions).
+  - Client: quotation, reservation, sale, receipt, installment and commission-rule modals; project/lead-prefilled forms; quotations, reservations, sales, sale detail, installments, collections and commissions pages; routes and permission-filtered Operations nav. Lead detail now links to a lead-prefilled quotation.
+  - Verification: lint clean; client 85 tests / 14 files; server 91 tests / 12 files. Browser cycle covered quotation creation from a lead (QT-2026-00001, net $158,500) → accepted → sale; partial receipt with auto-allocation, client over-allocation block, full receipt, handover, receipt void reopening balances; installment reschedule and waive; reservation cancel and reservation → sale conversion; sale cancel releasing the unit and cancelling installments/commissions; commission rule create/deactivate/reactivate/delete and ledger pending → approved → paid → cancelled; permission denial with a role-based Sales Agent (nav hidden, route guard, API `403`).
+  - Fixed during verification: missing `formatDateTime` client imports; React `set-state-in-effect` lint errors; sale `balance_due` still counted waived installments (now derived from open schedule balances, with a server regression test).
+  - Known limitations: an accepted quotation created from a lead does not prefill the sale customer because the quotation embed exposes only the lead id/name; the `?lead=` query parameter keeps the quotation modal open across reloads; voiding a receipt after handover reopens balances but leaves the historical handover record in place.
 - [ ] WP6 — Rental.
 - [ ] WP7 — Dashboard v1 and notifications.
 - [ ] WP8 — Public bridge.

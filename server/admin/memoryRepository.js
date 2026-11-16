@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { ApiError, notFound } from '../lib/errors.js';
 import { formatSequencePreview, sortSequences } from './catalog.js';
+import { installmentStatus, nextDueInstallment, roundMoney } from '../lib/sales.js';
 
 /**
  * In-memory implementation of the admin repository contract. It mirrors the
@@ -25,6 +26,15 @@ export class MemoryAdminRepository {
     customers = [],
     leadFollowups = [],
     visits = [],
+    quotations = [],
+    reservations = [],
+    sales = [],
+    installmentPlans = [],
+    installments = [],
+    receipts = [],
+    receiptAllocations = [],
+    commissionRules = [],
+    salesCommissions = [],
     team = [],
     roles = [],
     rolePermissions = {},
@@ -44,6 +54,15 @@ export class MemoryAdminRepository {
     this.customers = customers.map((row) => ({ ...row }));
     this.leadFollowups = leadFollowups.map((row) => ({ ...row }));
     this.visits = visits.map((row) => ({ ...row }));
+    this.quotations = quotations.map((row) => ({ ...row }));
+    this.reservations = reservations.map((row) => ({ ...row }));
+    this.sales = sales.map((row) => ({ ...row }));
+    this.installmentPlans = installmentPlans.map((row) => ({ ...row }));
+    this.installments = installments.map((row) => ({ ...row }));
+    this.receipts = receipts.map((row) => ({ ...row }));
+    this.receiptAllocations = receiptAllocations.map((row) => ({ ...row }));
+    this.commissionRules = commissionRules.map((row) => ({ ...row }));
+    this.salesCommissions = salesCommissions.map((row) => ({ ...row }));
     this.unitStatusHistory = [];
     this.unitContracts = new Map();
     this.team = team.map((row) => ({ ...row, roles: [...(row.roles || [])] }));
@@ -777,6 +796,592 @@ export class MemoryAdminRepository {
     customer.deleted_at = new Date().toISOString();
     customer.updated_at = customer.deleted_at;
     customer.lead_id = null;
+  }
+
+  // --- Sales: quotations, reservations, sales, receipts, commissions ---
+
+  quotationSummary(companyId, quotation) {
+    const customer = this.customers.find((row) => row.id === quotation.customer_id) || null;
+    const lead = this.leads.find((row) => row.id === quotation.lead_id) || null;
+    const unit = this.units.find((row) => row.id === quotation.unit_id && !row.deleted_at) || null;
+    const salesperson = this.team.find((row) => row.id === quotation.salesperson_id) || null;
+    return {
+      ...quotation,
+      customer: customer ? { id: customer.id, name: customer.name } : null,
+      lead: lead ? { id: lead.id, name: lead.name } : null,
+      unit: unit ? this.unitSummary(unit) : null,
+      salesperson: salesperson ? { id: salesperson.id, name: salesperson.name } : null,
+    };
+  }
+
+  async listQuotations(companyId) {
+    return this.quotations
+      .filter((row) => row.company_id === companyId && !row.deleted_at)
+      .map((row) => this.quotationSummary(companyId, row))
+      .sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)));
+  }
+
+  async getQuotation(companyId, id) {
+    const quotation = this.quotations.find(
+      (row) => row.company_id === companyId && row.id === id && !row.deleted_at,
+    );
+    return quotation ? this.quotationSummary(companyId, quotation) : null;
+  }
+
+  async createQuotation(companyId, patch) {
+    const row = {
+      id: randomUUID(),
+      company_id: companyId,
+      status: 'draft',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      deleted_at: null,
+      ...patch,
+    };
+    this.quotations.push(row);
+    return this.getQuotation(companyId, row.id);
+  }
+
+  async updateQuotation(companyId, id, patch) {
+    const quotation = this.quotations.find(
+      (row) => row.company_id === companyId && row.id === id && !row.deleted_at,
+    );
+    if (!quotation) throw notFound('Quotation not found.');
+    Object.assign(quotation, patch, { updated_at: new Date().toISOString() });
+    return this.getQuotation(companyId, id);
+  }
+
+  async deleteQuotation(companyId, id) {
+    const quotation = this.quotations.find(
+      (row) => row.company_id === companyId && row.id === id && !row.deleted_at,
+    );
+    if (!quotation) throw notFound('Quotation not found.');
+    quotation.deleted_at = new Date().toISOString();
+    quotation.updated_at = quotation.deleted_at;
+  }
+
+  reservationSummary(companyId, reservation) {
+    const customer = this.customers.find((row) => row.id === reservation.customer_id) || null;
+    const unit = this.units.find((row) => row.id === reservation.unit_id && !row.deleted_at) || null;
+    const sale = this.sales.find((row) => row.id === reservation.converted_sale_id) || null;
+    return {
+      ...reservation,
+      customer: customer ? { id: customer.id, name: customer.name } : null,
+      unit: unit ? this.unitSummary(unit) : null,
+      converted_sale: sale ? { id: sale.id, number: sale.number } : null,
+    };
+  }
+
+  async listReservations(companyId) {
+    return this.reservations
+      .filter((row) => row.company_id === companyId)
+      .map((row) => this.reservationSummary(companyId, row))
+      .sort((a, b) => String(b.reserved_on).localeCompare(String(a.reserved_on)));
+  }
+
+  async getReservation(companyId, id) {
+    const reservation = this.reservations.find(
+      (row) => row.company_id === companyId && row.id === id,
+    );
+    return reservation ? this.reservationSummary(companyId, reservation) : null;
+  }
+
+  async createReservation(companyId, patch) {
+    const row = {
+      id: randomUUID(),
+      company_id: companyId,
+      status: 'active',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      ...patch,
+    };
+    this.reservations.push(row);
+    return this.getReservation(companyId, row.id);
+  }
+
+  async updateReservation(companyId, id, patch) {
+    const reservation = this.reservations.find(
+      (row) => row.company_id === companyId && row.id === id,
+    );
+    if (!reservation) throw notFound('Reservation not found.');
+    Object.assign(reservation, patch, { updated_at: new Date().toISOString() });
+    return this.getReservation(companyId, id);
+  }
+
+  async findActiveReservationForUnit(companyId, unitId, excludeId = null) {
+    return (
+      this.reservations.find(
+        (row) =>
+          row.company_id === companyId &&
+          row.unit_id === unitId &&
+          row.id !== excludeId &&
+          row.status === 'active',
+      ) || null
+    );
+  }
+
+  async findActiveSaleForUnit(companyId, unitId, excludeId = null) {
+    return (
+      this.sales.find(
+        (row) =>
+          row.company_id === companyId &&
+          row.unit_id === unitId &&
+          row.id !== excludeId &&
+          ['pending_approval', 'active', 'fully_paid'].includes(row.status),
+      ) || null
+    );
+  }
+
+  async expireReservations(companyId, today) {
+    const expired = this.reservations.filter(
+      (row) =>
+        row.company_id === companyId &&
+        row.status === 'active' &&
+        String(row.expires_at).slice(0, 10) < String(today).slice(0, 10),
+    );
+    for (const reservation of expired) {
+      reservation.status = 'expired';
+      reservation.updated_at = new Date().toISOString();
+      const unit = this.units.find((row) => row.id === reservation.unit_id && !row.deleted_at);
+      if (!unit || unit.status !== 'reserved') continue;
+      const [otherReservation, activeSale] = await Promise.all([
+        this.findActiveReservationForUnit(companyId, unit.id, reservation.id),
+        this.findActiveSaleForUnit(companyId, unit.id),
+      ]);
+      if (!otherReservation && !activeSale) {
+        await this.updateUnitStatus(companyId, unit.id, {
+          status: 'available',
+          reason: `Reservation ${reservation.number} expired`,
+          changedBy: null,
+        });
+      }
+    }
+    return expired.length;
+  }
+
+  installmentView(companyId, installment) {
+    const plan = this.installmentPlans.find((row) => row.id === installment.plan_id) || null;
+    const graceDays = Number(plan?.grace_days || 0);
+    const status = installmentStatus(installment, {
+      today: new Date().toISOString().slice(0, 10),
+      graceDays,
+    });
+    const gross = Number(installment.amount || 0) + Number(installment.late_fee || 0);
+    const balance =
+      status === 'waived' || status === 'cancelled'
+        ? 0
+        : roundMoney(gross - Number(installment.paid_amount || 0));
+    return {
+      ...installment,
+      status,
+      grace_days: graceDays,
+      balance,
+    };
+  }
+
+  installmentWithSale(companyId, installment) {
+    const sale = this.sales.find((row) => row.id === installment.sale_id) || null;
+    const unit = sale ? this.units.find((row) => row.id === sale.unit_id) || null : null;
+    const customer = sale
+      ? this.customers.find((row) => row.id === sale.customer_id) || null
+      : null;
+    return {
+      ...this.installmentView(companyId, installment),
+      sale: sale
+        ? {
+            id: sale.id,
+            number: sale.number,
+            customer_id: sale.customer_id,
+            unit_id: sale.unit_id,
+            project_id: unit?.project_id || null,
+            net_price: sale.net_price,
+            customer: customer ? { id: customer.id, name: customer.name } : null,
+            unit: unit ? { id: unit.id, unit_number: unit.unit_number } : null,
+          }
+        : null,
+    };
+  }
+
+  saleSummary(companyId, sale) {
+    const customer = this.customers.find((row) => row.id === sale.customer_id) || null;
+    const unit = this.units.find((row) => row.id === sale.unit_id && !row.deleted_at) || null;
+    const salesperson = this.team.find((row) => row.id === sale.salesperson_id) || null;
+    const plan = this.installmentPlans.find((row) => row.sale_id === sale.id) || null;
+    const installments = this.installments
+      .filter((row) => row.sale_id === sale.id)
+      .sort((a, b) => a.sequence - b.sequence)
+      .map((row) => this.installmentView(companyId, row));
+    const nextDue = nextDueInstallment(installments);
+    const balanceDue = roundMoney(
+      installments
+        .filter((row) => !['waived', 'cancelled'].includes(row.status))
+        .reduce((sum, row) => sum + Number(row.balance || 0), 0),
+    );
+    return {
+      ...sale,
+      customer: customer ? { id: customer.id, name: customer.name } : null,
+      unit: unit ? this.unitSummary(unit) : null,
+      salesperson: salesperson ? { id: salesperson.id, name: salesperson.name } : null,
+      plan,
+      installments,
+      balance_due: balanceDue,
+      overdue_amount: roundMoney(
+        installments
+          .filter((row) => row.status === 'overdue')
+          .reduce((sum, row) => sum + Number(row.balance || 0), 0),
+      ),
+      next_due: nextDue,
+    };
+  }
+
+  async listSales(companyId) {
+    return this.sales
+      .filter((row) => row.company_id === companyId && !row.deleted_at)
+      .map((row) => this.saleSummary(companyId, row))
+      .sort((a, b) => String(b.agreement_date).localeCompare(String(a.agreement_date)));
+  }
+
+  async getSale(companyId, id) {
+    const sale = this.sales.find(
+      (row) => row.company_id === companyId && row.id === id && !row.deleted_at,
+    );
+    return sale ? this.saleSummary(companyId, sale) : null;
+  }
+
+  async createSale(companyId, { sale, plan, installments }) {
+    const saleRow = {
+      id: randomUUID(),
+      company_id: companyId,
+      status: 'active',
+      collected_amount: 0,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      deleted_at: null,
+      ...sale,
+    };
+    this.sales.push(saleRow);
+
+    const planRow = {
+      id: randomUUID(),
+      company_id: companyId,
+      sale_id: saleRow.id,
+      created_at: new Date().toISOString(),
+      ...plan,
+    };
+    this.installmentPlans.push(planRow);
+
+    for (const installment of installments) {
+      this.installments.push({
+        id: randomUUID(),
+        company_id: companyId,
+        plan_id: planRow.id,
+        sale_id: saleRow.id,
+        late_fee: 0,
+        paid_amount: 0,
+        status: 'upcoming',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        ...installment,
+        balance: roundMoney(Number(installment.amount || 0)),
+      });
+    }
+
+    const unit = this.units.find((row) => row.id === saleRow.unit_id && !row.deleted_at);
+    if (unit && unit.status !== 'sold') {
+      await this.updateUnitStatus(companyId, unit.id, {
+        status: 'sold',
+        reason: `Sale ${saleRow.number}`,
+        changedBy: saleRow.created_by || null,
+      });
+    }
+
+    return this.getSale(companyId, saleRow.id);
+  }
+
+  async updateSale(companyId, id, patch) {
+    const sale = this.sales.find(
+      (row) => row.company_id === companyId && row.id === id && !row.deleted_at,
+    );
+    if (!sale) throw notFound('Sale not found.');
+    Object.assign(sale, patch, { updated_at: new Date().toISOString() });
+    return this.saleSummary(companyId, sale);
+  }
+
+  async listInstallments(companyId) {
+    return this.installments
+      .filter((row) => row.company_id === companyId)
+      .map((row) => this.installmentWithSale(companyId, row))
+      .sort((a, b) => String(a.due_date).localeCompare(String(b.due_date)));
+  }
+
+  async getInstallment(companyId, id) {
+    const installment = this.installments.find(
+      (row) => row.company_id === companyId && row.id === id,
+    );
+    return installment ? this.installmentWithSale(companyId, installment) : null;
+  }
+
+  async updateInstallment(companyId, saleId, id, patch) {
+    const installment = this.installments.find(
+      (row) => row.company_id === companyId && row.sale_id === saleId && row.id === id,
+    );
+    if (!installment) throw notFound('Installment not found.');
+    const next = { ...patch };
+    if (['waived', 'cancelled'].includes(next.status)) next.balance = 0;
+    Object.assign(installment, next, { updated_at: new Date().toISOString() });
+    return this.installmentView(companyId, installment);
+  }
+
+  receiptSummary(companyId, receipt) {
+    const customer = this.customers.find((row) => row.id === receipt.customer_id) || null;
+    const allocations = this.receiptAllocations
+      .filter((row) => row.receipt_id === receipt.id)
+      .map((allocation) => {
+        const installment = this.installments.find((row) => row.id === allocation.installment_id);
+        const sale = installment
+          ? this.sales.find((row) => row.id === installment.sale_id)
+          : null;
+        return {
+          ...allocation,
+          installment: installment
+            ? {
+                id: installment.id,
+                sequence: installment.sequence,
+                due_date: installment.due_date,
+                amount: installment.amount,
+              }
+            : null,
+          sale: sale ? { id: sale.id, number: sale.number } : null,
+        };
+      });
+    return {
+      ...receipt,
+      customer: customer ? { id: customer.id, name: customer.name } : null,
+      allocations,
+      settles: allocations
+        .map((row) => row.sale?.number)
+        .filter((value, index, all) => value && all.indexOf(value) === index)
+        .join(', '),
+    };
+  }
+
+  async listReceipts(companyId) {
+    return this.receipts
+      .filter((row) => row.company_id === companyId)
+      .map((row) => this.receiptSummary(companyId, row))
+      .sort((a, b) => String(b.received_on).localeCompare(String(a.received_on)));
+  }
+
+  async getReceipt(companyId, id) {
+    const receipt = this.receipts.find((row) => row.company_id === companyId && row.id === id);
+    return receipt ? this.receiptSummary(companyId, receipt) : null;
+  }
+
+  async refreshSaleCollected(companyId, saleId) {
+    const sale = this.sales.find((row) => row.company_id === companyId && row.id === saleId);
+    if (!sale) return;
+    const plan = this.installmentPlans.find((row) => row.sale_id === saleId);
+    const completedIds = new Set(
+      this.receipts
+        .filter((row) => row.company_id === companyId && row.status === 'completed')
+        .map((row) => row.id),
+    );
+    const allocated = this.receiptAllocations
+      .filter((row) => completedIds.has(row.receipt_id))
+      .filter((row) => {
+        const installment = this.installments.find((item) => item.id === row.installment_id);
+        return installment?.sale_id === saleId;
+      })
+      .reduce((sum, row) => sum + Number(row.amount || 0), 0);
+    const downPayment = Number(plan?.down_payment || 0);
+    sale.collected_amount = roundMoney(downPayment + allocated);
+    sale.status =
+      sale.status === 'cancelled'
+        ? 'cancelled'
+        : sale.collected_amount + 0.005 >= Number(sale.net_price || 0)
+          ? 'fully_paid'
+          : 'active';
+    sale.updated_at = new Date().toISOString();
+  }
+
+  async createReceipt(companyId, payload) {
+    const { allocations = [], ...input } = payload;
+    const receipt = {
+      id: randomUUID(),
+      company_id: companyId,
+      status: 'completed',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      ...input,
+    };
+    this.receipts.push(receipt);
+
+    for (const allocation of allocations) {
+      const installment = this.installments.find(
+        (row) => row.company_id === companyId && row.id === allocation.installment_id,
+      );
+      if (!installment) throw notFound('Installment not found.');
+      this.receiptAllocations.push({
+        id: randomUUID(),
+        company_id: companyId,
+        receipt_id: receipt.id,
+        installment_id: installment.id,
+        amount: roundMoney(allocation.amount),
+        created_at: new Date().toISOString(),
+      });
+      installment.paid_amount = roundMoney(
+        Number(installment.paid_amount || 0) + Number(allocation.amount),
+      );
+      installment.balance = roundMoney(
+        Number(installment.amount || 0) +
+          Number(installment.late_fee || 0) -
+          Number(installment.paid_amount || 0),
+      );
+      installment.status = installment.balance <= 0.005 ? 'paid' : 'partly_paid';
+      installment.updated_at = new Date().toISOString();
+    }
+
+    for (const sale of this.sales.filter(
+      (row) => row.company_id === companyId && allocations.some((allocation) => {
+        const installment = this.installments.find((item) => item.id === allocation.installment_id);
+        return installment?.sale_id === row.id;
+      }),
+    )) {
+      await this.refreshSaleCollected(companyId, sale.id);
+    }
+    return this.getReceipt(companyId, receipt.id);
+  }
+
+  async voidReceipt(companyId, id, { reason, userId }) {
+    const receipt = this.receipts.find((row) => row.company_id === companyId && row.id === id);
+    if (!receipt) throw notFound('Receipt not found.');
+    if (receipt.status !== 'completed') {
+      throw new ApiError(422, 'Only a completed receipt can be voided.');
+    }
+    const allocations = this.receiptAllocations.filter((row) => row.receipt_id === receipt.id);
+    const saleIds = new Set();
+    for (const allocation of allocations) {
+      const installment = this.installments.find((row) => row.id === allocation.installment_id);
+      if (!installment) continue;
+      saleIds.add(installment.sale_id);
+      installment.paid_amount = roundMoney(
+        Math.max(0, Number(installment.paid_amount || 0) - Number(allocation.amount)),
+      );
+      installment.balance = roundMoney(
+        Number(installment.amount || 0) +
+          Number(installment.late_fee || 0) -
+          Number(installment.paid_amount || 0),
+      );
+      installment.status = installment.paid_amount > 0 ? 'partly_paid' : 'upcoming';
+      installment.updated_at = new Date().toISOString();
+    }
+    receipt.status = 'voided';
+    receipt.voided_at = new Date().toISOString();
+    receipt.void_reason = reason || null;
+    receipt.updated_at = receipt.voided_at;
+    receipt.voided_by = userId || null;
+
+    for (const saleId of saleIds) {
+      await this.refreshSaleCollected(companyId, saleId);
+    }
+    return this.getReceipt(companyId, receipt.id);
+  }
+
+  async listCommissionRules(companyId) {
+    return this.commissionRules
+      .filter((row) => row.company_id === companyId)
+      .map((row) => ({ ...row }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }
+
+  async getCommissionRule(companyId, id) {
+    return (
+      this.commissionRules.find((row) => row.company_id === companyId && row.id === id) || null
+    );
+  }
+
+  async createCommissionRule(companyId, patch) {
+    const row = {
+      id: randomUUID(),
+      company_id: companyId,
+      is_active: true,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      ...patch,
+    };
+    this.commissionRules.push(row);
+    return { ...row };
+  }
+
+  async updateCommissionRule(companyId, id, patch) {
+    const rule = this.commissionRules.find(
+      (row) => row.company_id === companyId && row.id === id,
+    );
+    if (!rule) throw notFound('Commission rule not found.');
+    Object.assign(rule, patch, { updated_at: new Date().toISOString() });
+    return { ...rule };
+  }
+
+  async deleteCommissionRule(companyId, id) {
+    const rule = this.commissionRules.find(
+      (row) => row.company_id === companyId && row.id === id,
+    );
+    if (!rule) throw notFound('Commission rule not found.');
+    this.commissionRules = this.commissionRules.filter((row) => row.id !== id);
+    for (const commission of this.salesCommissions) {
+      if (commission.rule_id === id) commission.rule_id = null;
+    }
+  }
+
+  commissionSummary(companyId, commission) {
+    const sale = this.sales.find((row) => row.id === commission.sale_id) || null;
+    const salesperson = this.team.find((row) => row.id === commission.salesperson_id) || null;
+    const rule = this.commissionRules.find((row) => row.id === commission.rule_id) || null;
+    return {
+      ...commission,
+      sale: sale ? { id: sale.id, number: sale.number, net_price: sale.net_price } : null,
+      salesperson: salesperson ? { id: salesperson.id, name: salesperson.name } : null,
+      rule: rule ? { id: rule.id, name: rule.name } : null,
+    };
+  }
+
+  async listSalesCommissions(companyId, filters = {}) {
+    return this.salesCommissions
+      .filter((row) => row.company_id === companyId)
+      .filter((row) => !filters.sale_id || row.sale_id === filters.sale_id)
+      .filter((row) => !filters.status || row.status === filters.status)
+      .filter((row) => !filters.salesperson_id || row.salesperson_id === filters.salesperson_id)
+      .map((row) => this.commissionSummary(companyId, row))
+      .sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)));
+  }
+
+  async getSalesCommission(companyId, id) {
+    const commission = this.salesCommissions.find(
+      (row) => row.company_id === companyId && row.id === id,
+    );
+    return commission ? this.commissionSummary(companyId, commission) : null;
+  }
+
+  async createSalesCommission(companyId, patch) {
+    const row = {
+      id: randomUUID(),
+      company_id: companyId,
+      status: 'pending',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      ...patch,
+    };
+    this.salesCommissions.push(row);
+    return this.commissionSummary(companyId, row);
+  }
+
+  async updateSalesCommission(companyId, id, patch) {
+    const commission = this.salesCommissions.find(
+      (row) => row.company_id === companyId && row.id === id,
+    );
+    if (!commission) throw notFound('Commission entry not found.');
+    Object.assign(commission, patch, { updated_at: new Date().toISOString() });
+    return this.commissionSummary(companyId, commission);
   }
 
   visitSummary(companyId, visit) {

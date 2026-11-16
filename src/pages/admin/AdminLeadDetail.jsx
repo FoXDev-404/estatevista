@@ -7,6 +7,7 @@ import {
   CalendarDays,
   CalendarPlus,
   CircleCheck,
+  FileText,
   Flag,
   LoaderCircle,
   Mail,
@@ -113,6 +114,7 @@ export default function AdminLeadDetail() {
   const canCreateCustomer = hasPermission('customers.create');
   const canCreateVisit = hasPermission('visits.create');
   const canEditVisit = hasPermission('visits.edit');
+  const canCreateQuotation = hasPermission('quotations.create');
 
   const [lead, setLead] = useState(null);
   const [status, setStatus] = useState('loading');
@@ -386,6 +388,15 @@ export default function AdminLeadDetail() {
                 <Pencil size={15} aria-hidden="true" />
                 Edit
               </button>
+            ) : null}
+            {canCreateQuotation && lead.status !== 'lost' ? (
+              <Link
+                className="button button--secondary button--md"
+                to={`/admin/quotations?lead=${lead.id}`}
+              >
+                <FileText size={15} aria-hidden="true" />
+                New quotation
+              </Link>
             ) : null}
             {canEditLead && lead.status !== 'lost' ? (
               <button

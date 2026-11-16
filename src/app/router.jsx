@@ -21,6 +21,13 @@ import AdminLeads from '../pages/admin/AdminLeads';
 import AdminLeadDetail from '../pages/admin/AdminLeadDetail';
 import AdminVisits from '../pages/admin/AdminVisits';
 import AdminCustomers from '../pages/admin/AdminCustomers';
+import AdminQuotations from '../pages/admin/AdminQuotations';
+import AdminReservations from '../pages/admin/AdminReservations';
+import AdminSales from '../pages/admin/AdminSales';
+import AdminSaleDetail from '../pages/admin/AdminSaleDetail';
+import AdminInstallments from '../pages/admin/AdminInstallments';
+import AdminCollections from '../pages/admin/AdminCollections';
+import AdminCommissions from '../pages/admin/AdminCommissions';
 import AdminSettings from '../pages/admin/AdminSettings';
 import AdminBranches from '../pages/admin/AdminBranches';
 import AdminTeam from '../pages/admin/AdminTeam';
@@ -140,6 +147,62 @@ export default function AppRoutes() {
             element={
               <ProtectedRoute permission="customers.view">
                 <AdminCustomers />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="quotations"
+            element={
+              <ProtectedRoute permission="quotations.view">
+                <AdminQuotations />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="reservations"
+            element={
+              <ProtectedRoute permission="reservations.view">
+                <AdminReservations />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="sales"
+            element={
+              <ProtectedRoute permission="sales.view">
+                <AdminSales />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="sales/:id"
+            element={
+              <ProtectedRoute permission="sales.view">
+                <AdminSaleDetail />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="installments"
+            element={
+              <ProtectedRoute permission="sales.view">
+                <AdminInstallments />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="collections"
+            element={
+              <ProtectedRoute permission="collections.view">
+                <AdminCollections />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="commissions"
+            element={
+              <ProtectedRoute permission="commissions.view">
+                <AdminCommissions />
               </ProtectedRoute>
             }
           />

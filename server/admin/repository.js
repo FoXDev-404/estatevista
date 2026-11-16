@@ -2,6 +2,7 @@ import { supabase } from '../supabaseClient.js';
 import { ApiError, notFound } from '../lib/errors.js';
 import { writeAudit as writeAuditLog } from '../lib/audit.js';
 import { sortSequences } from './catalog.js';
+import { installmentStatus, nextDueInstallment, roundMoney } from '../lib/sales.js';
 
 function fail(context, error) {
   console.error(`[admin] ${context}:`, error?.message || error);
@@ -18,6 +19,18 @@ const CUSTOMER_SELECT = '*, source:lookups(id, name), lead:leads(id, name)';
 const VISIT_SELECT =
   '*, lead:leads(id, name), customer:customers(id, name), project:projects(id, name), unit:units(id, unit_number), salesperson:users!visits_salesperson_id_fkey(id, name)';
 const FOLLOWUP_SELECT = '*, created_by_user:users!lead_followups_created_by_fkey(id, name)';
+const QUOTATION_SELECT =
+  '*, customer:customers(id, name), lead:leads(id, name), salesperson:users!quotations_salesperson_id_fkey(id, name), unit:units(id, unit_number, status, project_id, project:projects(id, name))';
+const RESERVATION_SELECT =
+  '*, customer:customers(id, name), unit:units(id, unit_number, status, project_id, project:projects(id, name)), converted_sale:sales!reservations_converted_sale_id_fkey(id, number)';
+const SALE_SELECT =
+  '*, customer:customers(id, name), salesperson:users!sales_salesperson_id_fkey(id, name), unit:units(id, unit_number, status, project_id, project:projects(id, name)), plan:installment_plans(*), installments:installments(*)';
+const INSTALLMENT_SELECT =
+  '*, sale:sales!installments_sale_id_fkey(id, number, customer_id, unit_id, net_price, customer:customers(id, name), unit:units(id, unit_number, project_id), plan:installment_plans(grace_days))';
+const RECEIPT_SELECT =
+  '*, customer:customers(id, name), allocations:receipt_allocations(id, installment_id, amount, installment:installments(id, sequence, due_date, amount, sale:sales(id, number)))';
+const COMMISSION_SELECT =
+  '*, sale:sales(id, number, net_price), salesperson:users!sales_commissions_salesperson_id_fkey(id, name), rule:commission_rules(id, name)';
 
 /**
  * Supabase-backed persistence for company settings, branches, team, roles and
@@ -1466,6 +1479,530 @@ export class SupabaseAdminRepository {
       .eq('id', id)
       .eq('company_id', companyId);
     if (error) fail('deleteVisit', error);
+  }
+
+  // --- Sales: quotations, reservations, sales, receipts, commissions ---
+
+  async listQuotations(companyId) {
+    const { data, error } = await this.client()
+      .from('quotations')
+      .select(QUOTATION_SELECT)
+      .eq('company_id', companyId)
+      .is('deleted_at', null)
+      .order('created_at', { ascending: false });
+    if (error) fail('listQuotations', error);
+    return data || [];
+  }
+
+  async getQuotation(companyId, id) {
+    const { data, error } = await this.client()
+      .from('quotations')
+      .select(QUOTATION_SELECT)
+      .eq('company_id', companyId)
+      .eq('id', id)
+      .is('deleted_at', null)
+      .maybeSingle();
+    if (error) fail('getQuotation', error);
+    return data || null;
+  }
+
+  async createQuotation(companyId, patch) {
+    const { data, error } = await this.client()
+      .from('quotations')
+      .insert({ company_id: companyId, ...patch })
+      .select('id')
+      .single();
+    if (error) {
+      if (error.code === '23505') {
+        throw new ApiError(409, 'This quotation number is already in use.');
+      }
+      fail('createQuotation', error);
+    }
+    return this.getQuotation(companyId, data.id);
+  }
+
+  async updateQuotation(companyId, id, patch) {
+    const { data, error } = await this.client()
+      .from('quotations')
+      .update({ ...patch, updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .eq('company_id', companyId)
+      .is('deleted_at', null)
+      .select('id')
+      .maybeSingle();
+    if (error) fail('updateQuotation', error);
+    if (!data) throw notFound('Quotation not found.');
+    return this.getQuotation(companyId, data.id);
+  }
+
+  async deleteQuotation(companyId, id) {
+    const { data, error } = await this.client()
+      .from('quotations')
+      .update({ deleted_at: new Date().toISOString() })
+      .eq('id', id)
+      .eq('company_id', companyId)
+      .is('deleted_at', null)
+      .select('id')
+      .maybeSingle();
+    if (error) fail('deleteQuotation', error);
+    if (!data) throw notFound('Quotation not found.');
+  }
+
+  async listReservations(companyId) {
+    const { data, error } = await this.client()
+      .from('reservations')
+      .select(RESERVATION_SELECT)
+      .eq('company_id', companyId)
+      .order('reserved_on', { ascending: false });
+    if (error) fail('listReservations', error);
+    return data || [];
+  }
+
+  async getReservation(companyId, id) {
+    const { data, error } = await this.client()
+      .from('reservations')
+      .select(RESERVATION_SELECT)
+      .eq('company_id', companyId)
+      .eq('id', id)
+      .maybeSingle();
+    if (error) fail('getReservation', error);
+    return data || null;
+  }
+
+  async createReservation(companyId, patch) {
+    const { data, error } = await this.client()
+      .from('reservations')
+      .insert({ company_id: companyId, ...patch })
+      .select('id')
+      .single();
+    if (error) {
+      if (error.code === '23505') {
+        throw new ApiError(409, 'This unit already has an active reservation.');
+      }
+      fail('createReservation', error);
+    }
+    return this.getReservation(companyId, data.id);
+  }
+
+  async updateReservation(companyId, id, patch) {
+    const { data, error } = await this.client()
+      .from('reservations')
+      .update({ ...patch, updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .eq('company_id', companyId)
+      .select('id')
+      .maybeSingle();
+    if (error) fail('updateReservation', error);
+    if (!data) throw notFound('Reservation not found.');
+    return this.getReservation(companyId, data.id);
+  }
+
+  async findActiveReservationForUnit(companyId, unitId, excludeId = null) {
+    let query = this.client()
+      .from('reservations')
+      .select('id, number, customer_id, unit_id, status')
+      .eq('company_id', companyId)
+      .eq('unit_id', unitId)
+      .eq('status', 'active');
+    if (excludeId) query = query.neq('id', excludeId);
+    const { data, error } = await query.maybeSingle();
+    if (error) fail('findActiveReservationForUnit', error);
+    return data || null;
+  }
+
+  async findActiveSaleForUnit(companyId, unitId, excludeId = null) {
+    let query = this.client()
+      .from('sales')
+      .select('id, number, customer_id, unit_id, status')
+      .eq('company_id', companyId)
+      .eq('unit_id', unitId)
+      .in('status', ['pending_approval', 'active', 'fully_paid'])
+      .is('deleted_at', null);
+    if (excludeId) query = query.neq('id', excludeId);
+    const { data, error } = await query.maybeSingle();
+    if (error) fail('findActiveSaleForUnit', error);
+    return data || null;
+  }
+
+  async expireReservations(companyId, today) {
+    const { data, error } = await this.client()
+      .from('reservations')
+      .select('id, number, unit_id')
+      .eq('company_id', companyId)
+      .eq('status', 'active')
+      .lt('expires_at', today);
+    if (error) fail('expireReservations', error);
+
+    for (const reservation of data || []) {
+      const { error: updateError } = await this.client()
+        .from('reservations')
+        .update({ status: 'expired', updated_at: new Date().toISOString() })
+        .eq('id', reservation.id)
+        .eq('company_id', companyId)
+        .eq('status', 'active');
+      if (updateError) fail('expireReservation', updateError);
+
+      const unit = await this.getUnit(companyId, reservation.unit_id);
+      if (!unit || unit.status !== 'reserved') continue;
+      const [otherReservation, activeSale] = await Promise.all([
+        this.findActiveReservationForUnit(companyId, unit.id),
+        this.findActiveSaleForUnit(companyId, unit.id),
+      ]);
+      if (!otherReservation && !activeSale) {
+        await this.updateUnitStatus(companyId, unit.id, {
+          status: 'available',
+          reason: `Reservation ${reservation.number} expired`,
+          changedBy: null,
+        });
+      }
+    }
+    return (data || []).length;
+  }
+
+  installmentView(installment, plan = null) {
+    const graceDays = Number(plan?.grace_days ?? installment.grace_days ?? 0);
+    const status = installmentStatus(installment, {
+      today: new Date().toISOString().slice(0, 10),
+      graceDays,
+    });
+    const gross = Number(installment.amount || 0) + Number(installment.late_fee || 0);
+    const balance =
+      status === 'waived' || status === 'cancelled'
+        ? 0
+        : roundMoney(gross - Number(installment.paid_amount || 0));
+    return { ...installment, status, grace_days: graceDays, balance };
+  }
+
+  saleView(row) {
+    if (!row) return null;
+    const plan = row.plan || null;
+    const installments = [...(row.installments || [])]
+      .sort((a, b) => a.sequence - b.sequence)
+      .map((installment) => this.installmentView(installment, plan));
+    const balanceDue = roundMoney(
+      installments
+        .filter((row) => !['waived', 'cancelled'].includes(row.status))
+        .reduce((sum, row) => sum + Number(row.balance || 0), 0),
+    );
+    return {
+      ...row,
+      plan,
+      installments,
+      balance_due: balanceDue,
+      overdue_amount: roundMoney(
+        installments
+          .filter((row) => row.status === 'overdue')
+          .reduce((sum, row) => sum + Number(row.balance || 0), 0),
+      ),
+      next_due: nextDueInstallment(installments),
+    };
+  }
+
+  async listSales(companyId) {
+    const { data, error } = await this.client()
+      .from('sales')
+      .select(SALE_SELECT)
+      .eq('company_id', companyId)
+      .is('deleted_at', null)
+      .order('agreement_date', { ascending: false })
+      .order('sequence', { foreignTable: 'installments' });
+    if (error) fail('listSales', error);
+    return (data || []).map((row) => this.saleView(row));
+  }
+
+  async getSale(companyId, id) {
+    const { data, error } = await this.client()
+      .from('sales')
+      .select(SALE_SELECT)
+      .eq('company_id', companyId)
+      .eq('id', id)
+      .is('deleted_at', null)
+      .order('sequence', { foreignTable: 'installments' })
+      .maybeSingle();
+    if (error) fail('getSale', error);
+    return this.saleView(data);
+  }
+
+  async createSale(companyId, { sale, plan, installments }) {
+    const { data: saleRow, error } = await this.client()
+      .from('sales')
+      .insert({ company_id: companyId, ...sale })
+      .select('id, number, unit_id')
+      .single();
+    if (error) {
+      if (error.code === '23505') {
+        throw new ApiError(409, 'This unit already has an active sale.');
+      }
+      fail('createSale', error);
+    }
+
+    const { data: planRow, error: planError } = await this.client()
+      .from('installment_plans')
+      .insert({ company_id: companyId, sale_id: saleRow.id, ...plan })
+      .select('id')
+      .single();
+    if (planError) {
+      await this.client().from('sales').delete().eq('id', saleRow.id).eq('company_id', companyId);
+      fail('createSalePlan', planError);
+    }
+
+    const { error: installmentError } = await this.client().from('installments').insert(
+      installments.map((row) => ({
+        company_id: companyId,
+        plan_id: planRow.id,
+        sale_id: saleRow.id,
+        sequence: row.sequence,
+        due_date: row.due_date,
+        amount: row.amount,
+        balance: row.amount,
+        status: 'upcoming',
+      })),
+    );
+    if (installmentError) {
+      await this.client().from('sales').delete().eq('id', saleRow.id).eq('company_id', companyId);
+      fail('createSaleInstallments', installmentError);
+    }
+
+    await this.updateUnitStatus(companyId, saleRow.unit_id, {
+      status: 'sold',
+      reason: `Sale ${saleRow.number}`,
+      changedBy: sale.created_by || null,
+    });
+
+    return this.getSale(companyId, saleRow.id);
+  }
+
+  async updateSale(companyId, id, patch) {
+    const { data, error } = await this.client()
+      .from('sales')
+      .update({ ...patch, updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .eq('company_id', companyId)
+      .is('deleted_at', null)
+      .select('id')
+      .maybeSingle();
+    if (error) fail('updateSale', error);
+    if (!data) throw notFound('Sale not found.');
+    return this.getSale(companyId, data.id);
+  }
+
+  async listInstallments(companyId) {
+    const { data, error } = await this.client()
+      .from('installments')
+      .select(INSTALLMENT_SELECT)
+      .eq('company_id', companyId)
+      .order('due_date');
+    if (error) fail('listInstallments', error);
+    return (data || []).map((row) => {
+      const { plan, ...sale } = row.sale || {};
+      return this.installmentView({ ...row, sale: row.sale ? sale : null }, plan);
+    });
+  }
+
+  async getInstallment(companyId, id) {
+    const { data, error } = await this.client()
+      .from('installments')
+      .select(INSTALLMENT_SELECT)
+      .eq('company_id', companyId)
+      .eq('id', id)
+      .maybeSingle();
+    if (error) fail('getInstallment', error);
+    if (!data) return null;
+    const { plan, ...sale } = data.sale || {};
+    return this.installmentView({ ...data, sale: data.sale ? sale : null }, plan);
+  }
+
+  async updateInstallment(companyId, saleId, id, patch) {
+    const { data, error } = await this.client()
+      .from('installments')
+      .update({ ...patch, updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .eq('sale_id', saleId)
+      .eq('company_id', companyId)
+      .select('id')
+      .maybeSingle();
+    if (error) fail('updateInstallment', error);
+    if (!data) throw notFound('Installment not found.');
+    return this.getInstallment(companyId, data.id);
+  }
+
+  receiptView(row) {
+    if (!row) return null;
+    const allocations = (row.allocations || []).map((allocation) => ({
+      ...allocation,
+      sale: allocation.installment?.sale
+        ? { id: allocation.installment.sale.id, number: allocation.installment.sale.number }
+        : null,
+    }));
+    const settles = allocations
+      .map((row) => row.sale?.number)
+      .filter((value, index, all) => value && all.indexOf(value) === index)
+      .join(', ');
+    return { ...row, allocations, settles };
+  }
+
+  async listReceipts(companyId) {
+    const { data, error } = await this.client()
+      .from('receipts')
+      .select(RECEIPT_SELECT)
+      .eq('company_id', companyId)
+      .order('received_on', { ascending: false });
+    if (error) fail('listReceipts', error);
+    return (data || []).map((row) => this.receiptView(row));
+  }
+
+  async getReceipt(companyId, id) {
+    const { data, error } = await this.client()
+      .from('receipts')
+      .select(RECEIPT_SELECT)
+      .eq('company_id', companyId)
+      .eq('id', id)
+      .maybeSingle();
+    if (error) fail('getReceipt', error);
+    return this.receiptView(data);
+  }
+
+  async createReceipt(companyId, payload) {
+    const { allocations = [], ...input } = payload;
+    const { data, error } = await this.client().rpc('post_sale_receipt', {
+      p_company_id: companyId,
+      p_customer_id: input.customer_id,
+      p_number: input.number,
+      p_received_on: input.received_on,
+      p_amount: input.amount,
+      p_reference: input.reference || null,
+      p_notes: input.notes || null,
+      p_created_by: input.created_by || null,
+      p_allocations: allocations.map((row) => ({
+        installment_id: row.installment_id,
+        amount: row.amount,
+      })),
+    });
+    if (error) {
+      const message = String(error.message || '');
+      if (/balance|allocation|installment|amount/i.test(message)) {
+        throw new ApiError(422, message.replace(/^.*?ERROR:\s*/i, ''));
+      }
+      fail('createReceipt', error);
+    }
+    return this.getReceipt(companyId, data);
+  }
+
+  async voidReceipt(companyId, id, { reason, userId }) {
+    const { data, error } = await this.client().rpc('void_sale_receipt', {
+      p_company_id: companyId,
+      p_receipt_id: id,
+      p_reason: reason || null,
+      p_user_id: userId || null,
+    });
+    if (error) {
+      const message = String(error.message || '');
+      if (/void|receipt|completed/i.test(message)) {
+        throw new ApiError(422, message.replace(/^.*?ERROR:\s*/i, ''));
+      }
+      fail('voidReceipt', error);
+    }
+    return this.getReceipt(companyId, data);
+  }
+
+  async listCommissionRules(companyId) {
+    const { data, error } = await this.client()
+      .from('commission_rules')
+      .select('*')
+      .eq('company_id', companyId)
+      .order('name');
+    if (error) fail('listCommissionRules', error);
+    return data || [];
+  }
+
+  async getCommissionRule(companyId, id) {
+    const { data, error } = await this.client()
+      .from('commission_rules')
+      .select('*')
+      .eq('company_id', companyId)
+      .eq('id', id)
+      .maybeSingle();
+    if (error) fail('getCommissionRule', error);
+    return data || null;
+  }
+
+  async createCommissionRule(companyId, patch) {
+    const { data, error } = await this.client()
+      .from('commission_rules')
+      .insert({ company_id: companyId, ...patch })
+      .select('id')
+      .single();
+    if (error) fail('createCommissionRule', error);
+    return this.getCommissionRule(companyId, data.id);
+  }
+
+  async updateCommissionRule(companyId, id, patch) {
+    const { data, error } = await this.client()
+      .from('commission_rules')
+      .update({ ...patch, updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .eq('company_id', companyId)
+      .select('id')
+      .maybeSingle();
+    if (error) fail('updateCommissionRule', error);
+    if (!data) throw notFound('Commission rule not found.');
+    return this.getCommissionRule(companyId, data.id);
+  }
+
+  async deleteCommissionRule(companyId, id) {
+    const { error } = await this.client()
+      .from('commission_rules')
+      .delete()
+      .eq('id', id)
+      .eq('company_id', companyId);
+    if (error) fail('deleteCommissionRule', error);
+  }
+
+  async listSalesCommissions(companyId, filters = {}) {
+    let query = this.client()
+      .from('sales_commissions')
+      .select(COMMISSION_SELECT)
+      .eq('company_id', companyId);
+    if (filters.sale_id) query = query.eq('sale_id', filters.sale_id);
+    if (filters.status) query = query.eq('status', filters.status);
+    if (filters.salesperson_id) query = query.eq('salesperson_id', filters.salesperson_id);
+    const { data, error } = await query.order('created_at', { ascending: false });
+    if (error) fail('listSalesCommissions', error);
+    return data || [];
+  }
+
+  async getSalesCommission(companyId, id) {
+    const { data, error } = await this.client()
+      .from('sales_commissions')
+      .select(COMMISSION_SELECT)
+      .eq('company_id', companyId)
+      .eq('id', id)
+      .maybeSingle();
+    if (error) fail('getSalesCommission', error);
+    return data || null;
+  }
+
+  async createSalesCommission(companyId, patch) {
+    const { data, error } = await this.client()
+      .from('sales_commissions')
+      .insert({ company_id: companyId, ...patch })
+      .select('id')
+      .single();
+    if (error) fail('createSalesCommission', error);
+    return this.getSalesCommission(companyId, data.id);
+  }
+
+  async updateSalesCommission(companyId, id, patch) {
+    const { data, error } = await this.client()
+      .from('sales_commissions')
+      .update({ ...patch, updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .eq('company_id', companyId)
+      .select('id')
+      .maybeSingle();
+    if (error) fail('updateSalesCommission', error);
+    if (!data) throw notFound('Commission entry not found.');
+    return this.getSalesCommission(companyId, data.id);
   }
 
   async getLookup(companyId, id, listKey = null) {
