@@ -57,20 +57,24 @@ export class AuthService {
       throw new ApiError(429, 'Too many failed sign-in attempts. Try again in 15 minutes.');
     }
 
-    const user = await this.repository.findUserByEmail(normalizedEmail);
-    let passwordMatches = false;
-
-    if (user) {
-      passwordMatches = await verifyPassword(password, user.password_hash);
+    const candidates = await this.repository.findUsersByEmail(normalizedEmail);
+    const matches = [];
+    if (candidates.length) {
+      for (const candidate of candidates) {
+        if (await verifyPassword(password, candidate.password_hash)) matches.push(candidate);
+      }
     } else {
       // Keep the response time close to a real user lookup.
       await verifyPassword(password, await getDummyHash());
     }
 
+    // A shared email is only safe while exactly one account accepts the
+    // password; two matches would make the company ambiguous.
+    const user = matches.length === 1 ? matches[0] : null;
     const company = user ? await this.repository.findCompanyById(user.company_id) : null;
     const companyActive = company && company.is_active !== false;
 
-    if (!user || !passwordMatches || !companyActive) {
+    if (!user || !companyActive) {
       await this.repository.recordLoginAttempt({
         email: normalizedEmail,
         ip: ipAddress,

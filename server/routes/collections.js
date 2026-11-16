@@ -64,7 +64,7 @@ export function createCollectionsRouter({ auth, repository }) {
         date_to: String(req.query.date_to || '') || null,
       };
 
-      let rows = await repository.listReceipts(companyId);
+      let rows = (await repository.listReceipts(companyId)).filter((row) => !row.tenant_id);
       if (filters.customer_id) rows = rows.filter((row) => row.customer_id === filters.customer_id);
       if (filters.status) rows = rows.filter((row) => row.status === filters.status);
       if (filters.date_from) rows = rows.filter((row) => row.received_on >= filters.date_from);
@@ -170,7 +170,7 @@ export function createCollectionsRouter({ auth, repository }) {
     asyncHandler(async (req, res) => {
       const companyId = req.auth.company.id;
       const receipt = await repository.getReceipt(companyId, req.params.id);
-      if (!receipt) throw new ApiError(404, 'Receipt not found.');
+      if (!receipt || receipt.tenant_id) throw new ApiError(404, 'Receipt not found.');
       res.json({ data: receipt });
     }),
   );
@@ -181,7 +181,7 @@ export function createCollectionsRouter({ auth, repository }) {
     asyncHandler(async (req, res) => {
       const companyId = req.auth.company.id;
       const receipt = await repository.getReceipt(companyId, req.params.id);
-      if (!receipt) throw new ApiError(404, 'Receipt not found.');
+      if (!receipt || receipt.tenant_id) throw new ApiError(404, 'Receipt not found.');
       const input = parseBody(voidSchema, req.body);
       if (receipt.status !== 'completed') {
         throw new ApiError(422, 'Only a completed receipt can be voided.');

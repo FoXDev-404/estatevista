@@ -5,6 +5,7 @@ import { sortSequences } from './catalog.js';
 import { installmentStatus, nextDueInstallment, roundMoney } from '../lib/sales.js';
 import {
   depositHeld,
+  depositStatusAfter,
   rentScheduleView,
   rentSummary,
 } from '../lib/rental.js';
@@ -338,18 +339,28 @@ export class SupabaseAdminRepository {
     if (!data) throw notFound('Team member not found.');
 
     if (Array.isArray(roleIds)) {
-      const { error: clearError } = await this.client()
-        .from('user_roles')
-        .delete()
-        .eq('user_id', id);
-      if (clearError) fail('updateTeamMemberRolesClear', clearError);
-
+      // Add the new roles before removing old ones so a failed insert cannot
+      // leave the member with no roles at all.
       if (roleIds.length) {
         const { error: roleError } = await this.client()
           .from('user_roles')
-          .insert(roleIds.map((roleId) => ({ user_id: id, role_id: roleId })));
+          .upsert(
+            roleIds.map((roleId) => ({ user_id: id, role_id: roleId })),
+            { onConflict: 'user_id,role_id', ignoreDuplicates: true },
+          );
         if (roleError) fail('updateTeamMemberRoles', roleError);
       }
+
+      let clearQuery = this.client().from('user_roles').delete().eq('user_id', id);
+      if (roleIds.length) {
+        clearQuery = clearQuery.not(
+          'role_id',
+          'in',
+          `(${roleIds.map((roleId) => `"${roleId}"`).join(',')})`,
+        );
+      }
+      const { error: clearError } = await clearQuery;
+      if (clearError) fail('updateTeamMemberRolesClear', clearError);
     }
 
     return this.getTeamMember(companyId, id);
@@ -1457,6 +1468,19 @@ export class SupabaseAdminRepository {
     return this.getWebsiteInquiry(companyId, data.id);
   }
 
+  async claimWebsiteInquiryLead(companyId, id, leadId) {
+    const { data, error } = await this.client()
+      .from('website_inquiries')
+      .update({ lead_id: leadId, updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .eq('company_id', companyId)
+      .is('lead_id', null)
+      .select('id')
+      .maybeSingle();
+    if (error) fail('claimWebsiteInquiryLead', error);
+    return Boolean(data);
+  }
+
   async updateWebsiteInquiry(companyId, id, patch) {
     const { data, error } = await this.client()
       .from('website_inquiries')
@@ -2293,6 +2317,70 @@ export class SupabaseAdminRepository {
     return data || null;
   }
 
+  async expireLeases(companyId, today) {
+    const cutoff = String(today).slice(0, 10);
+    const { data, error } = await this.client()
+      .from('leases')
+      .select('id, number, unit_id, end_date')
+      .eq('company_id', companyId)
+      .eq('status', 'active')
+      .lt('end_date', cutoff)
+      .is('deleted_at', null);
+    if (error) fail('expireLeases', error);
+
+    for (const lease of data || []) {
+      const { data: updated, error: updateError } = await this.client()
+        .from('leases')
+        .update({ status: 'expired', updated_at: new Date().toISOString() })
+        .eq('id', lease.id)
+        .eq('company_id', companyId)
+        .eq('status', 'active')
+        .select('id')
+        .maybeSingle();
+      if (updateError) fail('expireLease', updateError);
+      if (!updated) continue;
+
+      const { error: scheduleError } = await this.client()
+        .from('rent_schedules')
+        .update({
+          status: 'cancelled',
+          balance: 0,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('company_id', companyId)
+        .eq('lease_id', lease.id)
+        .gt('period_start', lease.end_date)
+        .lte('paid_amount', 0.005)
+        .not('status', 'in', '(waived,cancelled)');
+      if (scheduleError) fail('expireLeaseSchedules', scheduleError);
+
+      const deposit = await this.getDepositByLease(companyId, lease.id);
+      if (deposit) {
+        await this.updateDeposit(companyId, deposit.id, {
+          status: depositStatusAfter({ deposit, leaseStatus: 'expired' }),
+          held_amount: depositHeld(deposit),
+        });
+      }
+
+      const unit = await this.getUnit(companyId, lease.unit_id);
+      if (!unit || unit.status !== 'rented') continue;
+      const [otherLease, activeSale, activeReservation] = await Promise.all([
+        this.findActiveLeaseForUnit(companyId, unit.id),
+        this.findActiveSaleForUnit(companyId, unit.id),
+        this.findActiveReservationForUnit(companyId, unit.id),
+      ]);
+      if (!otherLease && !activeSale && !activeReservation) {
+        await this.updateUnitStatus(companyId, unit.id, {
+          status: 'available',
+          reason: `Lease ${lease.number} expired`,
+          changedBy: null,
+        });
+      }
+    }
+
+    return (data || []).length;
+  }
+
   async listRentSchedules(companyId) {
     const { data, error } = await this.client()
       .from('rent_schedules')
@@ -2415,6 +2503,24 @@ export class SupabaseAdminRepository {
     if (error) fail('updateDeposit', error);
     if (!data) throw notFound('Security deposit not found.');
     return this.getDeposit(companyId, data.id);
+  }
+
+  async applyDepositTransaction(companyId, depositId, { type, amount, reason, userId }) {
+    const { data, error } = await this.client().rpc('apply_deposit_transaction', {
+      p_company_id: companyId,
+      p_deposit_id: depositId,
+      p_type: type,
+      p_amount: amount,
+      p_reason: reason || null,
+      p_user_id: userId || null,
+    });
+    if (error) {
+      const message = String(error.message || '');
+      if (/not found/i.test(message)) throw notFound('Security deposit not found.');
+      if (/balance|amount|action/i.test(message)) throw new ApiError(422, message);
+      fail('applyDepositTransaction', error);
+    }
+    return this.getDeposit(companyId, data);
   }
 
   async createDepositTransaction(companyId, payload) {

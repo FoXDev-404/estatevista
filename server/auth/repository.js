@@ -24,18 +24,16 @@ export class SupabaseAuthRepository {
     return this.supabase;
   }
 
-  async findUserByEmail(email) {
+  async findUsersByEmail(email) {
     const { data, error } = await this.client()
       .from('users')
       .select('*')
       .eq('email', String(email || '').trim().toLowerCase())
       .eq('is_active', true)
-      .order('created_at', { ascending: true })
-      .limit(1)
-      .maybeSingle();
+      .order('created_at', { ascending: true });
 
-    if (error) fail('findUserByEmail', error);
-    return data;
+    if (error) fail('findUsersByEmail', error);
+    return data || [];
   }
 
   async findUserById(id) {

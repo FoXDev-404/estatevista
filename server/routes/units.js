@@ -48,7 +48,11 @@ const createUnitSchema = z.object({
 });
 
 const updateUnitSchema = z.object(
-  Object.fromEntries(Object.entries(unitBase).map(([key, schema]) => [key, schema.optional()])),
+  Object.fromEntries(
+    Object.entries(unitBase)
+      .filter(([key]) => key !== 'status')
+      .map(([key, schema]) => [key, schema.optional()]),
+  ),
 );
 
 const statusSchema = z.object({
@@ -204,6 +208,11 @@ export function createUnitsRouter({ auth, repository }) {
     asyncHandler(async (req, res) => {
       const companyId = req.auth.company.id;
       const before = await requireUnit(companyId, req.params.id);
+      if (Object.hasOwn(req.body || {}, 'status')) {
+        throw validationError({
+          status: 'Use the status action to change the unit status.',
+        });
+      }
       const input = parseBody(updateUnitSchema, req.body);
 
       const merged = { ...before, ...input };

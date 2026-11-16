@@ -87,6 +87,56 @@ describe('AuthService', () => {
     expect(repo.users[0].last_login_at).toBe(nowRef.value);
   });
 
+  it('signs in users from different companies that share an email', async () => {
+    const secondCompany = {
+      ...company,
+      id: 'company-2',
+      name: 'Second Company',
+      slug: 'second-company',
+    };
+    const first = {
+      id: 'user-1',
+      company_id: company.id,
+      name: 'First User',
+      email: 'shared@example.com',
+      password_hash: await hashPassword('FirstPass123'),
+      full_access: false,
+      is_active: true,
+    };
+    const second = {
+      id: 'user-2',
+      company_id: secondCompany.id,
+      name: 'Second User',
+      email: 'shared@example.com',
+      password_hash: await hashPassword('SecondPass123'),
+      full_access: false,
+      is_active: true,
+    };
+    const { repo } = await makeRepo({
+      companies: [company, secondCompany],
+      users: [first, second],
+      userRoles: [],
+      rolePermissions: [],
+    });
+    const service = makeService(repo, nowRef);
+
+    const firstLogin = await service.login({
+      email: 'shared@example.com',
+      password: 'FirstPass123',
+      ip: '203.0.113.10',
+    });
+    expect(firstLogin.user.id).toBe('user-1');
+    expect(firstLogin.company.id).toBe(company.id);
+
+    const secondLogin = await service.login({
+      email: 'shared@example.com',
+      password: 'SecondPass123',
+      ip: '203.0.113.10',
+    });
+    expect(secondLogin.user.id).toBe('user-2');
+    expect(secondLogin.company.id).toBe(secondCompany.id);
+  });
+
   it('rejects a wrong password and records a failed attempt', async () => {
     const { repo } = await makeRepo();
     const service = makeService(repo, nowRef);

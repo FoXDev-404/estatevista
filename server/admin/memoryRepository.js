@@ -4,6 +4,7 @@ import { formatSequencePreview, sortSequences } from './catalog.js';
 import { installmentStatus, nextDueInstallment, roundMoney } from '../lib/sales.js';
 import {
   depositHeld,
+  depositStatusAfter,
   rentScheduleView,
   rentSummary,
 } from '../lib/rental.js';
@@ -841,6 +842,16 @@ export class MemoryAdminRepository {
     return this.websiteInquirySummary(companyId, row);
   }
 
+  async claimWebsiteInquiryLead(companyId, id, leadId) {
+    const row = this.websiteInquiries.find(
+      (item) => item.company_id === companyId && item.id === id,
+    );
+    if (!row || row.lead_id) return false;
+    row.lead_id = leadId;
+    row.updated_at = new Date().toISOString();
+    return true;
+  }
+
   async updateWebsiteInquiry(companyId, id, patch) {
     const row = this.websiteInquiries.find(
       (item) => item.company_id === companyId && item.id === id,
@@ -1432,12 +1443,16 @@ export class MemoryAdminRepository {
       installment.paid_amount = roundMoney(
         Math.max(0, Number(installment.paid_amount || 0) - Number(allocation.amount)),
       );
-      installment.balance = roundMoney(
-        Number(installment.amount || 0) +
-          Number(installment.late_fee || 0) -
-          Number(installment.paid_amount || 0),
-      );
-      installment.status = installment.paid_amount > 0 ? 'partly_paid' : 'upcoming';
+      if (['waived', 'cancelled'].includes(installment.status)) {
+        installment.balance = 0;
+      } else {
+        installment.balance = roundMoney(
+          Number(installment.amount || 0) +
+            Number(installment.late_fee || 0) -
+            Number(installment.paid_amount || 0),
+        );
+        installment.status = installment.paid_amount > 0 ? 'partly_paid' : 'upcoming';
+      }
       installment.updated_at = new Date().toISOString();
     }
     receipt.status = 'voided';
@@ -1805,6 +1820,61 @@ export class MemoryAdminRepository {
     );
   }
 
+  async expireLeases(companyId, today) {
+    const cutoff = String(today).slice(0, 10);
+    const expired = this.leases.filter(
+      (row) =>
+        row.company_id === companyId &&
+        row.status === 'active' &&
+        !row.deleted_at &&
+        String(row.end_date).slice(0, 10) < cutoff,
+    );
+
+    for (const lease of expired) {
+      lease.status = 'expired';
+      lease.updated_at = new Date().toISOString();
+
+      for (const schedule of this.rentSchedules) {
+        if (schedule.company_id !== companyId || schedule.lease_id !== lease.id) continue;
+        if (String(schedule.period_start).slice(0, 10) <= String(lease.end_date).slice(0, 10)) {
+          continue;
+        }
+        if (Number(schedule.paid_amount || 0) > 0.005) continue;
+        if (['waived', 'cancelled'].includes(schedule.status)) continue;
+        schedule.status = 'cancelled';
+        schedule.balance = 0;
+        schedule.updated_at = new Date().toISOString();
+      }
+
+      const deposit = this.securityDeposits.find(
+        (row) => row.company_id === companyId && row.lease_id === lease.id,
+      );
+      if (deposit) {
+        deposit.status = depositStatusAfter({ deposit, leaseStatus: 'expired' });
+        deposit.held_amount = depositHeld(deposit);
+        deposit.updated_at = new Date().toISOString();
+      }
+
+      const unit = this.units.find((row) => row.id === lease.unit_id && !row.deleted_at);
+      if (unit && unit.status === 'rented') {
+        const [otherLease, activeSale, activeReservation] = await Promise.all([
+          this.findActiveLeaseForUnit(companyId, unit.id),
+          this.findActiveSaleForUnit(companyId, unit.id),
+          this.findActiveReservationForUnit(companyId, unit.id),
+        ]);
+        if (!otherLease && !activeSale && !activeReservation) {
+          await this.updateUnitStatus(companyId, unit.id, {
+            status: 'available',
+            reason: `Lease ${lease.number} expired`,
+            changedBy: null,
+          });
+        }
+      }
+    }
+
+    return expired.length;
+  }
+
   async listRentSchedules(companyId) {
     return this.rentSchedules
       .filter((row) => row.company_id === companyId)
@@ -1913,6 +1983,59 @@ export class MemoryAdminRepository {
     );
     if (!deposit) throw notFound('Security deposit not found.');
     Object.assign(deposit, patch, { updated_at: new Date().toISOString() });
+    return this.depositSummary(companyId, deposit);
+  }
+
+  async applyDepositTransaction(companyId, depositId, { type, amount, reason, userId }) {
+    const deposit = this.securityDeposits.find(
+      (row) => row.company_id === companyId && row.id === depositId,
+    );
+    if (!deposit) throw notFound('Security deposit not found.');
+    if (!(Number(amount) > 0)) {
+      throw new ApiError(422, 'Enter an amount greater than zero.');
+    }
+
+    const value = roundMoney(Number(amount));
+    const held = depositHeld(deposit);
+    if (type === 'deduction' && value > held + 0.005) {
+      throw new ApiError(422, 'The deduction exceeds the held balance.');
+    }
+    if (type === 'refund' && value > held + 0.005) {
+      throw new ApiError(422, 'The refund exceeds the held balance.');
+    }
+    if (!['receipt', 'deduction', 'refund'].includes(type)) {
+      throw new ApiError(422, 'Unknown deposit action.');
+    }
+
+    if (type === 'receipt') {
+      deposit.received_amount = roundMoney(Number(deposit.received_amount || 0) + value);
+    } else if (type === 'deduction') {
+      deposit.deducted_amount = roundMoney(Number(deposit.deducted_amount || 0) + value);
+    } else {
+      deposit.refunded_amount = roundMoney(Number(deposit.refunded_amount || 0) + value);
+    }
+
+    const lease = this.leases.find(
+      (row) => row.company_id === companyId && row.id === deposit.lease_id,
+    );
+    deposit.held_amount = depositHeld(deposit);
+    deposit.status = depositStatusAfter({
+      deposit,
+      leaseStatus: lease?.status || 'active',
+    });
+    deposit.updated_at = new Date().toISOString();
+
+    this.depositTransactions.push({
+      id: randomUUID(),
+      company_id: companyId,
+      deposit_id: deposit.id,
+      type,
+      amount: value,
+      reason: reason || null,
+      created_by: userId || null,
+      created_at: new Date().toISOString(),
+    });
+
     return this.depositSummary(companyId, deposit);
   }
 

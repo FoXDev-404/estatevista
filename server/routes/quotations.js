@@ -34,10 +34,9 @@ const baseFields = {
 const createSchema = z.object(baseFields);
 const updateSchema = z.object(
   Object.fromEntries(
-    Object.entries(baseFields).map(([key, schema]) => [
-      key,
-      key === 'status' ? z.enum(['draft', 'sent']).optional() : schema.optional(),
-    ]),
+    Object.entries(baseFields)
+      .filter(([key]) => key !== 'status')
+      .map(([key, schema]) => [key, schema.optional()]),
   ),
 );
 const statusSchema = z.object({
@@ -207,6 +206,14 @@ export function createQuotationsRouter({ auth, repository }) {
     asyncHandler(async (req, res) => {
       const companyId = req.auth.company.id;
       const quotation = await requireQuotation(companyId, req.params.id);
+      if (Object.hasOwn(req.body || {}, 'status')) {
+        throw validationError({
+          status: 'Use the status action to change the quotation status.',
+        });
+      }
+      if (quotation.status !== 'draft') {
+        throw new ApiError(409, 'Only draft quotations can be edited.');
+      }
       const input = parseBody(updateSchema, req.body);
       const merged = {
         ...quotation,

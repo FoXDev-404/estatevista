@@ -182,13 +182,14 @@ Document source: `03-pages/04-rental.md`.
 | Lease renewal with follow-on lease and old lease `renewed` | Implemented | WP6 manual `LSE-2026-00003` |
 | Revise rent for future unpaid periods | Implemented | WP6 manual effective 2027-01-01 |
 | Terminate lease, cancel future unpaid periods and release the unit | Implemented | WP6 manual |
+| Lease expiry after `end_date` cancels future periods, moves the deposit to settlement and releases the unit | Implemented | Lease/rent-roll/dashboard reads run the expiry sweep; `rental.test.js`; arrears stay collectible |
 | Rent roll with period/status/project filters and summary | Implemented | `/admin/rent-roll`; `rental.test.js`; WP6 manual |
 | Rent collections with auto-allocation, receipt and void | Implemented | `/admin/rent-collections`; `rental.test.js`; WP6 manual |
 | Shared `RCP-` receipt numbering with sales collections | Implemented | `rental.test.js`; WP6 manual |
 | Security deposit receive/deduct/refund/history | Implemented | `/admin/deposits`; `rental.test.js`; WP6 manual |
 | Deposit lifecycle `to_collect → held → awaiting_settlement → settled` | Implemented | `rental.test.js`; WP6 manual |
 | Deposit rows across renewal | Partial | A renewal settles the old deposit and starts a fresh one; deposits are per lease |
-| Unit status driven by lease lifecycle | Implemented | Activation/termination; `rental.test.js`; WP6 manual |
+| Unit status driven by lease lifecycle | Implemented | Activation/termination/expiry; `rental.test.js`; WP6 manual |
 | Maintenance requests and assignments | Deferred | R1 non-goal |
 | Recurring rent generation job | Deferred | Schedules are generated on activation; no scheduler |
 
@@ -298,15 +299,44 @@ Document sources: `04-api-contract.md`, `05-data-model.md`.
 10. Public company resolution is environment-based and single-tenant; unknown slugs return `503`.
 11. The website inquiry inbox is read-only.
 12. Demo-only behaviour (blocked deletes, getting-started modal, net-profit KPI, chart) was not copied.
+13. Company timezone and date format are stored but not applied to calculations or display; date-only strings parse as UTC. Treat them as display-only in R1.
+14. The public inquiry throttle is an in-process fixed window (10 new submissions per IP per 10 minutes). It resets on restart and is not shared across instances.
+15. Money-critical SQL (receipt post/void, rent post/void, deposit actions) is exercised through the in-memory repository in CI; a disposable-Postgres integration tier is still required before production.
 
-## M. Sign-off checklist
+## M. Review outcomes and sign-off checklist
+
+Independent review of `0b5f06b..167b55b` returned "Ready to merge? With fixes" (2 Critical, 7 Important, 7 Minor). Dispositions:
+
+| Finding | Outcome |
+|---|---|
+| C1 lease activation vs active sale/reservation | Fixed with regression test |
+| C2 voiding a sale receipt after cancellation | Fixed in memory mirror and migration `013_review_fixes.sql` |
+| I1 lease expiry sweep | Fixed on lease, rent-roll and dashboard reads; test covers future-period closure, arrears, deposit and unit release |
+| I2 deposit atomicity | Fixed by `apply_deposit_transaction` in migration `014_deposit_atomicity.sql`; concurrency itself is not exercised without the Postgres tier |
+| I3 shared-email login across companies | Fixed with two-company test |
+| I4 public inquiry throttling | Fixed with in-process limiter and 429/replay tests |
+| I5 unit status via PATCH | Fixed; status changes require `/status` |
+| I6 unfiltered documents list | Fixed; owner context and module permission required |
+| I7 Postgres integration tier | Deferred; no reachable disposable database |
+| M1 deposit amount on lease edit | Fixed |
+| M2 renewal start date | Fixed |
+| M3 quotation edit guard and client payload | Fixed |
+| M4 team role replacement | Improved (insert before delete); not fully transactional |
+| M5 concurrent inquiry lead race | Fixed with conditional claim and orphan cleanup |
+| M6 timezone/date format | Deferred and listed as limitation 13 |
+| M7 sale quotation/reservation integrity | Fixed |
+| Collections cross-module receipt access | Fixed; rent receipts are 404 on sales collections endpoints |
+
+Post-fix verification: `npm run lint` clean; `npm test -- --run` 108 tests / 18 files; `npm run test:server` 164 tests / 17 files.
+
+
 
 - [x] Phase 1 flows inventoried and mapped to a section above.
 - [x] Every R1 work package has automated tests and a recorded manual cycle.
 - [x] Deferred modules are named and tied to the approved R1 non-goals.
 - [x] Known limitations are recorded rather than hidden.
 - [x] Final sequential commands pass: lint, client tests, server tests.
-- [ ] Branch-level code review completed.
+- [x] Branch-level code review completed (independent reviewer; findings triaged above).
 - [ ] Merge/keep-branch decision recorded by the human partner.
 
 ## N. Document coverage index

@@ -110,8 +110,8 @@ export default function QuotationFormModal({
         discount_amount: form.discount_amount === '' ? 0 : form.discount_amount,
         tax_amount: form.tax_amount === '' ? 0 : form.tax_amount,
         terms: form.terms || null,
-        status: form.status,
       };
+      if (!editing) payload.status = form.status;
       const saved = editing
         ? await salesApiService.updateQuotation(quotation.id, payload)
         : await salesApiService.createQuotation(payload);

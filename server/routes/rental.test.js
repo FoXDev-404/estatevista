@@ -537,6 +537,57 @@ describe('rental routes', () => {
       expect(duplicate.body.error).toMatch(/lease/i);
     });
 
+    it('blocks activation when the unit has an active sale or reservation', async () => {
+      const { agent, csrf } = await loginAdmin(app);
+      const saleLease = (await createLease(agent, csrf).expect(201)).body.data;
+
+      adminRepository.sales.push({
+        id: 'd9999999-9999-4999-8999-999999999999',
+        company_id: COMPANY_ID,
+        unit_id: UNIT_ONE_ID,
+        number: 'SAL-2026-00009',
+        customer_id: null,
+        status: 'active',
+      });
+      await adminRepository.updateUnitStatus(COMPANY_ID, UNIT_ONE_ID, {
+        status: 'sold',
+        reason: 'Sale created',
+        changedBy: ADMIN_ID,
+      });
+
+      const saleBlocked = await activateLease(agent, csrf, saleLease.id).expect(409);
+      expect(saleBlocked.body.error).toMatch(/active sale|reservation/i);
+      expect((await agent.get(`/api/leases/${saleLease.id}`).expect(200)).body.data.status).toBe(
+        'draft',
+      );
+      expect(adminRepository.units.find((row) => row.id === UNIT_ONE_ID).status).toBe('sold');
+
+      const reservationLease = (
+        await createLease(agent, csrf, { unit_id: UNIT_TWO_ID }).expect(201)
+      ).body.data;
+      adminRepository.reservations.push({
+        id: 'd8888888-8888-4888-8888-888888888888',
+        company_id: COMPANY_ID,
+        unit_id: UNIT_TWO_ID,
+        number: 'RSV-2026-00009',
+        customer_id: null,
+        status: 'active',
+      });
+      await adminRepository.updateUnitStatus(COMPANY_ID, UNIT_TWO_ID, {
+        status: 'reserved',
+        reason: 'Reservation created',
+        changedBy: ADMIN_ID,
+      });
+
+      const reservationBlocked = await activateLease(
+        agent,
+        csrf,
+        reservationLease.id,
+      ).expect(409);
+      expect(reservationBlocked.body.error).toMatch(/active sale|reservation/i);
+      expect(adminRepository.units.find((row) => row.id === UNIT_TWO_ID).status).toBe('reserved');
+    });
+
     it('renews a lease, links the previous lease and keeps the unit rented', async () => {
       const { agent, csrf } = await loginAdmin(app);
       const created = await createLease(agent, csrf, { end_date: '2026-12-31' }).expect(201);
@@ -546,8 +597,8 @@ describe('rental routes', () => {
         .post(`/api/leases/${created.body.data.id}/renew`)
         .set('X-CSRF-Token', csrf)
         .send({
-          start_date: '2027-01-01',
-          end_date: '2027-12-31',
+          start_date: '2027-02-01',
+          end_date: '2028-01-31',
           rent_amount: 1300,
           due_day: 5,
           grace_days: 5,
@@ -574,6 +625,42 @@ describe('rental routes', () => {
         held_amount: 0,
       });
       expect(adminRepository.units.find((row) => row.id === UNIT_ONE_ID).status).toBe('rented');
+    });
+
+    it('keeps the deposit amount in step with a draft lease edit', async () => {
+      const { agent, csrf } = await loginAdmin(app);
+      const created = await createLease(agent, csrf).expect(201);
+      const leaseId = created.body.data.id;
+      const depositId = created.body.data.deposit.id;
+
+      await agent
+        .patch(`/api/leases/${leaseId}`)
+        .set('X-CSRF-Token', csrf)
+        .send({ security_deposit_amount: 3000 })
+        .expect(200);
+
+      const deposit = await agent.get(`/api/deposits/${depositId}`).expect(200);
+      expect(deposit.body.data).toMatchObject({
+        required_amount: 3000,
+        status: 'to_collect',
+      });
+    });
+
+    it('rejects a renewal that starts before the current lease ends', async () => {
+      const { agent, csrf } = await loginAdmin(app);
+      const created = await createLease(agent, csrf).expect(201);
+      await activateLease(agent, csrf, created.body.data.id).expect(200);
+
+      const response = await agent
+        .post(`/api/leases/${created.body.data.id}/renew`)
+        .set('X-CSRF-Token', csrf)
+        .send({
+          start_date: '2027-01-15',
+          end_date: '2027-12-31',
+          rent_amount: 1300,
+        })
+        .expect(422);
+      expect(response.body.fields?.start_date || response.body.error).toMatch(/after/i);
     });
 
     it('revises rent for future unpaid periods only', async () => {
@@ -634,6 +721,53 @@ describe('rental routes', () => {
         terminated.body.data.schedules.find((row) => row.period_label === 'Nov 2026').status,
       ).not.toBe('cancelled');
       expect(terminated.body.data.deposit.status).toBe('awaiting_settlement');
+      expect(adminRepository.units.find((row) => row.id === UNIT_ONE_ID).status).toBe('available');
+    });
+
+    it('expires a finished lease, closes future periods and releases the unit', async () => {
+      const { agent, csrf } = await loginAdmin(app);
+      const created = await createLease(agent, csrf, {
+        start_date: '2026-06-01',
+        end_date: '2026-10-31',
+      }).expect(201);
+      const activated = await activateLease(agent, csrf, created.body.data.id).expect(200);
+      const depositId = activated.body.data.deposit.id;
+
+      await agent
+        .post(`/api/deposits/${depositId}/receipt`)
+        .set('X-CSRF-Token', csrf)
+        .send({ amount: 2400 })
+        .expect(200);
+
+      adminRepository.rentSchedules.push({
+        id: 'c9999999-9999-4999-8999-999999999999',
+        company_id: COMPANY_ID,
+        lease_id: created.body.data.id,
+        period_label: 'Nov 2026',
+        period_start: '2026-11-01',
+        period_end: '2026-11-30',
+        due_date: '2026-11-05',
+        rent_amount: 1200,
+        adjustments: 0,
+        late_fee: 0,
+        paid_amount: 0,
+        status: 'upcoming',
+        created_at: '2026-10-01T00:00:00.000Z',
+        updated_at: '2026-10-01T00:00:00.000Z',
+      });
+
+      const expired = await agent.get(`/api/leases/${created.body.data.id}`).expect(200);
+      expect(expired.body.data.status).toBe('expired');
+      expect(expired.body.data.deposit).toMatchObject({
+        status: 'awaiting_settlement',
+        held_amount: 2400,
+      });
+      expect(
+        expired.body.data.schedules.find((row) => row.period_label === 'Nov 2026').status,
+      ).toBe('cancelled');
+      expect(
+        expired.body.data.schedules.find((row) => row.period_label === 'Jun 2026').status,
+      ).toBe('overdue');
       expect(adminRepository.units.find((row) => row.id === UNIT_ONE_ID).status).toBe('available');
     });
 

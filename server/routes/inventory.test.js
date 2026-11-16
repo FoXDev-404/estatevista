@@ -683,6 +683,20 @@ describe('inventory: projects, buildings and units', () => {
     expect(duplicate.body.fields.unit_number).toBeTruthy();
   });
 
+  it('does not change a unit status through the general update endpoint', async () => {
+    const { agent, csrf } = await loginAdmin(app);
+
+    const blocked = await agent
+      .patch(`/api/units/${UNIT_ID}`)
+      .set('X-CSRF-Token', csrf)
+      .send({ status: 'sold' })
+      .expect(422);
+    expect(blocked.body.fields.status).toMatch(/status action/i);
+
+    const unchanged = await agent.get(`/api/units/${UNIT_ID}`).expect(200);
+    expect(unchanged.body.data.status).toBe('available');
+  });
+
   it('generates numbered units across a floor range and rejects collisions', async () => {
     const { agent, csrf } = await loginAdmin(app);
 
@@ -828,6 +842,16 @@ describe('inventory: projects, buildings and units', () => {
 
     const list = await agent.get(`/api/units?project_id=${PROJECT_ID}`).expect(200);
     expect(list.body.data.map((row) => row.id)).not.toContain(DRAFT_UNIT_ID);
+  });
+
+  it('requires a document owner and the matching module permission', async () => {
+    const { agent } = await loginAdmin(app);
+
+    const unfiltered = await agent.get('/api/documents').expect(422);
+    expect(unfiltered.body.fields.owner_type).toBeTruthy();
+
+    const missingOwner = await agent.get('/api/documents?owner_type=project').expect(422);
+    expect(missingOwner.body.fields.owner_id).toBeTruthy();
   });
 
   it('stores, lists and deletes project documents', async () => {

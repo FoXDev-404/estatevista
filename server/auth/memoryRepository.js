@@ -24,12 +24,13 @@ export class MemoryAuthRepository {
     this.auditLogs = [];
   }
 
-  async findUserByEmail(email) {
+  async findUsersByEmail(email) {
     const normalized = String(email || '').trim().toLowerCase();
-    const user = this.users.find(
-      (row) => String(row.email).toLowerCase() === normalized && row.is_active !== false,
-    );
-    return user ? { ...user } : null;
+    return this.users
+      .filter(
+        (row) => String(row.email).toLowerCase() === normalized && row.is_active !== false,
+      )
+      .map((row) => ({ ...row }));
   }
 
   async findUserById(id) {

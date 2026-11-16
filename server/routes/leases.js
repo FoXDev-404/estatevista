@@ -23,6 +23,7 @@ import {
   releaseUnitIfFree,
   requireLease,
   scheduleBalance,
+  todayIso,
 } from './rentalSupport.js';
 
 const money = z.preprocess(
@@ -176,14 +177,33 @@ async function createLeaseRecord(req, repository, { input, previousLease = null 
   });
 }
 
-async function activateLeaseRecord(req, repository, lease) {
+async function activateLeaseRecord(req, repository, lease, { previousLease = null } = {}) {
   const companyId = req.auth.company.id;
   if (lease.status !== 'draft') {
     throw new ApiError(422, 'Only a draft lease can be activated.');
   }
-  const other = await repository.findActiveLeaseForUnit(companyId, lease.unit_id, lease.id);
-  if (other) {
+  const [otherLease, otherSale, otherReservation, unit] = await Promise.all([
+    repository.findActiveLeaseForUnit(companyId, lease.unit_id, lease.id),
+    repository.findActiveSaleForUnit(companyId, lease.unit_id),
+    repository.findActiveReservationForUnit(companyId, lease.unit_id),
+    repository.getUnit(companyId, lease.unit_id),
+  ]);
+  if (otherLease) {
     throw new ApiError(409, 'This unit already has an active lease.');
+  }
+  if (otherSale || otherReservation) {
+    throw new ApiError(
+      409,
+      'This unit has an active sale or reservation. Close it before activating the lease.',
+    );
+  }
+  if (!unit) throw new ApiError(404, 'Unit not found.');
+  const allowedStatus = unit.status === 'available' || (previousLease && unit.status === 'rented');
+  if (!allowedStatus) {
+    throw new ApiError(
+      409,
+      `A ${String(unit.status).replaceAll('_', ' ')} unit cannot start a lease. Choose another unit.`,
+    );
   }
 
   const rows = buildRentSchedule({
@@ -247,6 +267,7 @@ export function createLeasesRouter({ auth, repository }) {
         project_id: String(req.query.project_id || '') || null,
       };
 
+      await repository.expireLeases(companyId, todayIso());
       let rows = await repository.listLeases(companyId);
       if (filters.status) rows = rows.filter((row) => row.status === filters.status);
       if (filters.tenant_id) rows = rows.filter((row) => row.tenant_id === filters.tenant_id);
@@ -298,7 +319,9 @@ export function createLeasesRouter({ auth, repository }) {
     '/:id',
     ...view,
     asyncHandler(async (req, res) => {
-      const lease = await repository.getLease(req.auth.company.id, req.params.id);
+      const companyId = req.auth.company.id;
+      await repository.expireLeases(companyId, todayIso());
+      const lease = await repository.getLease(companyId, req.params.id);
       if (!lease) throw new ApiError(404, 'Lease not found.');
       res.json({ data: lease });
     }),
@@ -324,6 +347,17 @@ export function createLeasesRouter({ auth, repository }) {
         ...input,
         updated_by: req.auth.user.id,
       });
+      if (input.security_deposit_amount !== undefined && lease.deposit) {
+        const deposit = {
+          ...lease.deposit,
+          required_amount: roundMoney(input.security_deposit_amount),
+        };
+        await repository.updateDeposit(companyId, lease.deposit.id, {
+          required_amount: deposit.required_amount,
+          held_amount: depositHeld(deposit),
+          status: depositStatusAfter({ deposit, leaseStatus: updated.status }),
+        });
+      }
       await writeAudit(req, lease.id, 'updated', { status: lease.status }, { status: updated.status });
       res.json({ data: updated });
     }),
@@ -354,6 +388,11 @@ export function createLeasesRouter({ auth, repository }) {
       }
       const input = parseBody(renewSchema, req.body);
       validateDates(input);
+      if (String(input.start_date) <= String(lease.end_date)) {
+        throw validationError({
+          start_date: 'Choose a start date after the current lease ends.',
+        });
+      }
       if (Number(input.rent_amount) <= 0) {
         throw validationError({ rent_amount: 'Enter a monthly rent greater than zero.' });
       }
@@ -371,7 +410,9 @@ export function createLeasesRouter({ auth, repository }) {
       if (input.activate) {
         await repository.updateLease(companyId, lease.id, { status: 'renewed' });
         try {
-          result = await activateLeaseRecord(req, repository, renewal);
+          result = await activateLeaseRecord(req, repository, renewal, {
+            previousLease: lease,
+          });
         } catch (error) {
           await repository.updateLease(companyId, lease.id, { status: 'active' });
           throw error;

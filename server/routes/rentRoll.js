@@ -26,6 +26,7 @@ export function createRentRollRouter({ auth, repository }) {
         date_to: String(req.query.date_to || '') || null,
       };
 
+      await repository.expireLeases(companyId, todayIso());
       let rows = await repository.listRentSchedules(companyId);
       if (filters.status === 'open') {
         rows = rows.filter((row) => OPEN_STATUSES.includes(row.status));

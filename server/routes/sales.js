@@ -196,7 +196,7 @@ export function createSalesRouter({ auth, repository }) {
         throw validationError({ unit_id: 'This unit is not available to sell.' });
       }
 
-      let reservation = null;
+      let reservation = activeReservation || null;
       if (input.reservation_id) {
         reservation = await repository.getReservation(companyId, input.reservation_id);
         if (!reservation) throw validationError({ reservation_id: 'Choose a reservation from this company.' });
@@ -220,6 +220,11 @@ export function createSalesRouter({ auth, repository }) {
         }
         if (quotation.unit_id !== unit.id) {
           throw validationError({ quotation_id: 'The quotation is for a different unit.' });
+        }
+        if (quotation.customer_id && quotation.customer_id !== input.customer_id) {
+          throw validationError({
+            quotation_id: 'The quotation belongs to a different customer.',
+          });
         }
       }
 

@@ -641,6 +641,51 @@ describe('WP8 public inquiry bridge', () => {
     expect(repository.leads).toHaveLength(2);
   });
 
+  it('creates only one lead for concurrent submits with the same key', async () => {
+    const beforeLeads = adminRepository.leads.length;
+    const payload = validInquiry({ submission_key: 'public-concurrent-0001' });
+
+    const responses = await Promise.all([
+      request(app).post('/api/public/inquiries').send(payload),
+      request(app).post('/api/public/inquiries').send(payload),
+    ]);
+
+    expect(responses.map((response) => response.status).sort()).toEqual([200, 201]);
+    expect(adminRepository.leads.length - beforeLeads).toBe(1);
+    const inquiry = adminRepository.websiteInquiries.find(
+      (row) => row.submission_key === 'public-concurrent-0001',
+    );
+    expect(inquiry.lead_id).toBeTruthy();
+  });
+
+  it('throttles new submissions from the same connection', async () => {
+    for (let index = 1; index <= 10; index += 1) {
+      await request(app)
+        .post('/api/public/inquiries')
+        .send(
+          validInquiry({
+            submission_key: `public-throttle-${String(index).padStart(4, '0')}`,
+          }),
+        )
+        .expect(201);
+    }
+
+    const blocked = await request(app)
+      .post('/api/public/inquiries')
+      .send(
+        validInquiry({
+          submission_key: 'public-throttle-0011',
+        }),
+      )
+      .expect(429);
+    expect(blocked.body.error).toMatch(/too many/i);
+
+    await request(app)
+      .post('/api/public/inquiries')
+      .send(validInquiry({ submission_key: 'public-throttle-0001' }))
+      .expect(200);
+  });
+
   it('requires inquiries.view and keeps the inbox company-scoped', async () => {
     await request(app).get('/api/website-inquiries').expect(401);
 

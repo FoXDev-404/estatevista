@@ -3,6 +3,8 @@ import { z } from 'zod';
 import { ApiError, asyncHandler, validationError } from '../lib/errors.js';
 import { parseBody, nullableEmail, nullableString, nullableUuid } from '../lib/validation.js';
 import { WEBSITE_INQUIRY_TYPES } from '../lib/inquiries.js';
+import { clientIp } from '../lib/scoping.js';
+import { createRateLimiter } from '../lib/rateLimit.js';
 import { resolveProjectUnit } from './crmSupport.js';
 
 const emptyToText = (value) => (value === undefined || value === null ? '' : value);
@@ -82,7 +84,17 @@ async function attachLead(repository, companyId, inquiry) {
     updated_by: null,
   });
 
-  return repository.updateWebsiteInquiry(companyId, inquiry.id, { lead_id: lead.id });
+  const claimed = await repository.claimWebsiteInquiryLead(companyId, inquiry.id, lead.id);
+  if (!claimed) {
+    // A concurrent retry already attached its lead; drop ours instead of
+    // leaving a duplicate CRM record behind.
+    try {
+      await repository.deleteLead(companyId, lead.id);
+    } catch {
+      // Best effort: the claim winner is already the inquiry's lead.
+    }
+  }
+  return (await repository.getWebsiteInquiry(companyId, inquiry.id)) || inquiry;
 }
 
 async function finishCapture(repository, companyId, inquiry) {
@@ -96,6 +108,11 @@ async function finishCapture(repository, companyId, inquiry) {
 
 export function createPublicInquiriesRouter({ repository, publicCompanySlug }) {
   const router = Router();
+  const allowSubmission = createRateLimiter({
+    windowMs: 10 * 60 * 1000,
+    max: 10,
+    key: (req) => clientIp(req),
+  });
 
   // POST /api/public/inquiries — public contact, project, property and visit requests.
   router.post(
@@ -115,6 +132,13 @@ export function createPublicInquiriesRouter({ repository, publicCompanySlug }) {
       if (existing) {
         await finishCapture(repository, companyId, existing);
         return res.status(200).json({ success: true, duplicate: true });
+      }
+
+      if (!allowSubmission(req)) {
+        throw new ApiError(
+          429,
+          'Too many inquiries were submitted from this connection. Try again later.',
+        );
       }
 
       const resolved = await resolveProjectUnit(repository, companyId, input);

@@ -443,9 +443,37 @@ async function createSale(agent, csrf, overrides = {}) {
 
 describe('sales: quotations, reservations, sales, collections and commissions', () => {
   let app;
+  let adminRepository;
 
   beforeEach(async () => {
-    ({ app } = await makeApp());
+    ({ app, adminRepository } = await makeApp());
+  });
+
+  it('keeps rent receipts out of the sales collections endpoints', async () => {
+    adminRepository.receipts.push({
+      id: 'f1111111-1111-4111-8111-111111111111',
+      company_id: COMPANY_ID,
+      tenant_id: 'f2222222-2222-4222-8222-222222222222',
+      customer_id: null,
+      number: 'RCP-2026-000001',
+      status: 'completed',
+      received_on: '2026-11-10',
+      amount: 1200,
+      created_at: '2026-11-10T00:00:00.000Z',
+    });
+
+    const { agent, csrf } = await loginAdmin(app);
+    const listed = await agent.get('/api/collections').expect(200);
+    expect(listed.body.data).toHaveLength(0);
+
+    await agent
+      .get('/api/collections/f1111111-1111-4111-8111-111111111111')
+      .expect(404);
+    await agent
+      .post('/api/collections/f1111111-1111-4111-8111-111111111111/void')
+      .set('X-CSRF-Token', csrf)
+      .send({ reason: 'Wrong module' })
+      .expect(404);
   });
 
   it('creates and filters a quotation from a lead, then enforces status transitions', async () => {
@@ -494,6 +522,39 @@ describe('sales: quotations, reservations, sales, collections and commissions', 
     });
   });
 
+  it('keeps quotation status changes and edits on their own endpoints', async () => {
+    const { agent, csrf } = await loginAdmin(app);
+    const created = await createQuotation(agent, csrf);
+
+    const statusBypass = await agent
+      .patch(`/api/quotations/${created.body.data.id}`)
+      .set('X-CSRF-Token', csrf)
+      .send({ status: 'sent', unit_price: 1 })
+      .expect(422);
+    expect(statusBypass.body.fields.status).toMatch(/status action/i);
+
+    const unchanged = await agent.get(`/api/quotations/${created.body.data.id}`).expect(200);
+    expect(unchanged.body.data).toMatchObject({ status: 'draft', unit_price: 300000 });
+
+    await agent
+      .post(`/api/quotations/${created.body.data.id}/status`)
+      .set('X-CSRF-Token', csrf)
+      .send({ status: 'sent' })
+      .expect(200);
+    await agent
+      .post(`/api/quotations/${created.body.data.id}/status`)
+      .set('X-CSRF-Token', csrf)
+      .send({ status: 'accepted' })
+      .expect(200);
+
+    const locked = await agent
+      .patch(`/api/quotations/${created.body.data.id}`)
+      .set('X-CSRF-Token', csrf)
+      .send({ unit_price: 1 })
+      .expect(409);
+    expect(locked.body.error).toMatch(/draft/i);
+  });
+
   it('reserves a unit, blocks duplicates, cancels and expires reservations', async () => {
     const { agent, csrf } = await loginAdmin(app);
 
@@ -520,6 +581,56 @@ describe('sales: quotations, reservations, sales, collections and commissions', 
     expect(expiring.status).toBe(201);
     expect(expiring.body.data.status).toBe('expired');
     expect(expiring.body.data.unit.status).toBe('available');
+  });
+
+  it('converts a matching reservation when the sale is created directly', async () => {
+    const { agent, csrf } = await loginAdmin(app);
+    const reservation = await createReservation(agent, csrf);
+    expect(reservation.status).toBe(201);
+
+    const sale = await createSale(agent, csrf);
+    expect(sale.status).toBe(201);
+    const converted = await agent
+      .get(`/api/reservations/${reservation.body.data.id}`)
+      .expect(200);
+    expect(converted.body.data).toMatchObject({
+      status: 'converted',
+      converted_sale_id: sale.body.data.id,
+    });
+    expect(sale.body.data.unit.status).toBe('sold');
+  });
+
+  it('rejects a quotation that belongs to a different customer', async () => {
+    adminRepository.customers.push(
+      customerRow({
+        id: '22222222-bbbb-4bbb-8bbb-222222222222',
+        name: 'Jordan Blake',
+        email: 'jordan.blake@example.test',
+      }),
+    );
+    const { agent, csrf } = await loginAdmin(app);
+    const quotation = await createQuotation(agent, csrf, {
+      lead_id: null,
+      customer_id: CUSTOMER_ID,
+    });
+    expect(quotation.status).toBe(201);
+    await agent
+      .post(`/api/quotations/${quotation.body.data.id}/status`)
+      .set('X-CSRF-Token', csrf)
+      .send({ status: 'sent' })
+      .expect(200);
+    await agent
+      .post(`/api/quotations/${quotation.body.data.id}/status`)
+      .set('X-CSRF-Token', csrf)
+      .send({ status: 'accepted' })
+      .expect(200);
+
+    const response = await createSale(agent, csrf, {
+      customer_id: '22222222-bbbb-4bbb-8bbb-222222222222',
+      quotation_id: quotation.body.data.id,
+    });
+    expect(response.status).toBe(422);
+    expect(response.body.fields?.quotation_id || response.body.error).toMatch(/customer/i);
   });
 
   it('creates an installment sale with a generated schedule and a full-payment sale', async () => {
@@ -678,6 +789,54 @@ describe('sales: quotations, reservations, sales, collections and commissions', 
 
     const voidList = await agent.get('/api/collections?status=voided').expect(200);
     expect(voidList.body.data).toHaveLength(1);
+  });
+
+  it('keeps cancelled installments cancelled when a receipt is voided after sale cancellation', async () => {
+    const { agent, csrf } = await loginAdmin(app);
+    const sale = (await createSale(agent, csrf)).body.data;
+    const first = sale.installments[0];
+
+    const receipt = await agent
+      .post('/api/collections')
+      .set('X-CSRF-Token', csrf)
+      .send({
+        customer_id: CUSTOMER_ID,
+        received_on: '2026-11-10',
+        amount: 4000,
+        allocations: [{ installment_id: first.id, amount: 4000 }],
+      })
+      .expect(201);
+
+    await agent
+      .post(`/api/sales/${sale.id}/cancel`)
+      .set('X-CSRF-Token', csrf)
+      .send({ reason: 'Customer withdrew' })
+      .expect(200);
+
+    await agent
+      .post(`/api/collections/${receipt.body.data.id}/void`)
+      .set('X-CSRF-Token', csrf)
+      .send({ reason: 'Cheque returned' })
+      .expect(200);
+
+    const detail = await agent.get(`/api/sales/${sale.id}`).expect(200);
+    expect(detail.body.data.status).toBe('cancelled');
+    expect(detail.body.data.balance_due).toBe(0);
+    expect(detail.body.data.installments.every((row) => row.status === 'cancelled')).toBe(true);
+    expect(detail.body.data.installments.every((row) => Number(row.balance) === 0)).toBe(true);
+    expect(detail.body.data.installments[0].paid_amount).toBe(0);
+
+    const rejected = await agent
+      .post('/api/collections')
+      .set('X-CSRF-Token', csrf)
+      .send({
+        customer_id: CUSTOMER_ID,
+        received_on: '2026-11-12',
+        amount: 4000,
+        allocations: [{ installment_id: first.id, amount: 4000 }],
+      })
+      .expect(422);
+    expect(rejected.body.fields.allocations).toMatch(/cannot receive/i);
   });
 
   it('requires a zero open balance before handover and releases the unit on cancel', async () => {

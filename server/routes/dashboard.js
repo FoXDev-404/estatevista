@@ -251,6 +251,8 @@ export function createDashboardRouter({ auth, repository }) {
       const canProjects = can('projects.view');
       const canPipeline = can('leads.view');
 
+      if (canRent) await repository.expireLeases(companyId, todayIso());
+
       const [receipts, installments, sales, schedules, projects, leads, unitCounts] =
         await Promise.all([
           canSales || canRent ? repository.listReceipts(companyId) : [],

@@ -142,4 +142,6 @@ manual evidence, and lists the known limitations carried into sign-off.
 
 - Verification baseline at `b13d18e`: `npm run lint` clean; client 107 tests / 17 files; server 150 tests / 17 files.
 - R1 implementation is complete across WP0–WP8; deferred modules are explicitly mapped to R2+ by the approved scope.
-- Remaining sign-off items: branch-level code review and the human merge/keep-branch decision.
+- Independent review of `0b5f06b..167b55b` returned "Ready to merge? With fixes" (2 Critical, 7 Important, 7 Minor). Both Critical findings were fixed, and all Important findings except the Postgres integration tier were fixed or improved; see the review disposition table in `08-release-1-verification.md`.
+- Review-fix verification: `npm run lint` clean; client 108 tests / 18 files; server 164 tests / 17 files. Migrations `013_review_fixes.sql` and `014_deposit_atomicity.sql` applied via Supabase MCP.
+- Remaining sign-off item: the human merge/keep-branch decision. Deferred review items: Postgres integration tier (no reachable disposable database), company timezone/date format, and full transactionality for team role replacement.

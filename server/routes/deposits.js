@@ -4,11 +4,7 @@ import { ApiError, asyncHandler, validationError } from '../lib/errors.js';
 import { nullableString, parseBody } from '../lib/validation.js';
 import { clientIp } from '../lib/scoping.js';
 import { paginated, parsePagination } from '../lib/pagination.js';
-import {
-  depositHeld,
-  depositStatusAfter,
-  roundMoney,
-} from '../lib/rental.js';
+import { roundMoney } from '../lib/rental.js';
 import { matchesSearch, requireDeposit } from './rentalSupport.js';
 
 const money = z.preprocess(
@@ -46,48 +42,11 @@ export function createDepositsRouter({ auth, repository }) {
       throw validationError({ amount: 'Enter an amount greater than zero.' });
     }
 
-    const next = {
-      ...deposit,
-      received_amount: Number(deposit.received_amount || 0),
-      deducted_amount: Number(deposit.deducted_amount || 0),
-      refunded_amount: Number(deposit.refunded_amount || 0),
-    };
-    const held = depositHeld(deposit);
-
-    if (type === 'receipt') {
-      next.received_amount = roundMoney(next.received_amount + amount);
-    } else if (type === 'deduction') {
-      if (amount > held + 0.005) {
-        throw new ApiError(422, 'The deduction exceeds the held balance.');
-      }
-      next.deducted_amount = roundMoney(next.deducted_amount + amount);
-    } else {
-      if (amount > held + 0.005) {
-        throw new ApiError(422, 'The refund exceeds the held balance.');
-      }
-      next.refunded_amount = roundMoney(next.refunded_amount + amount);
-    }
-
-    const lease = await repository.getLease(companyId, deposit.lease_id);
-    const status = depositStatusAfter({
-      deposit: next,
-      leaseStatus: lease?.status || 'active',
-    });
-
-    const updated = await repository.updateDeposit(companyId, deposit.id, {
-      received_amount: next.received_amount,
-      deducted_amount: next.deducted_amount,
-      refunded_amount: next.refunded_amount,
-      held_amount: depositHeld(next),
-      status,
-    });
-
-    await repository.createDepositTransaction(companyId, {
-      deposit_id: deposit.id,
+    const updated = await repository.applyDepositTransaction(companyId, deposit.id, {
       type,
       amount,
       reason: input.reason || input.reference || null,
-      created_by: req.auth.user.id,
+      userId: req.auth.user.id,
     });
 
     await writeAudit(req, deposit.id, 'updated', { status: deposit.status }, {

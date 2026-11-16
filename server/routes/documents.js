@@ -83,19 +83,23 @@ export function createDocumentsRouter({ auth, repository }) {
       const ownerType = String(req.query.owner_type || '');
       const ownerId = String(req.query.owner_id || '');
 
-      if (ownerType) {
-        if (!['project', 'unit'].includes(ownerType)) {
-          throw validationError({ owner_type: 'Choose a project or unit.' });
-        }
-        assertPermission(req, ownerType, 'view');
+      if (!ownerType) {
+        throw validationError({ owner_type: 'Choose a project or unit.' });
       }
-      if (ownerId && !/^[0-9a-f-]{36}$/i.test(ownerId)) {
+      if (!['project', 'unit'].includes(ownerType)) {
+        throw validationError({ owner_type: 'Choose a project or unit.' });
+      }
+      assertPermission(req, ownerType, 'view');
+      if (!ownerId) {
+        throw validationError({ owner_id: 'Choose a record.' });
+      }
+      if (!/^[0-9a-f-]{36}$/i.test(ownerId)) {
         throw validationError({ owner_id: 'Choose a valid record.' });
       }
 
       const rows = await repository.listDocuments(companyId, {
-        ownerType: ownerType || null,
-        ownerId: ownerId || null,
+        ownerType,
+        ownerId,
       });
       res.json({ data: rows });
     }),
