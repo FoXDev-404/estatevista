@@ -337,7 +337,7 @@ Post-fix verification: `npm run lint` clean; `npm test -- --run` 108 tests / 18 
 - [x] Known limitations are recorded rather than hidden.
 - [x] Final sequential commands pass: lint, client tests, server tests.
 - [x] Branch-level code review completed (independent reviewer; findings triaged above).
-- [ ] Merge/keep-branch decision recorded by the human partner.
+- [x] Merge/keep-branch decision recorded by the human partner: merge locally into `main` (merge commit `1559b29`), then delete `feat/r1-core-ops`. Post-merge verification: lint clean, client 108 tests / 18 files, server 164 tests / 17 files.
 
 ## N. Document coverage index
 
