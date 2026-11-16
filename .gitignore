@@ -13,3 +13,6 @@ supabase/.temp/
 
 # graft's local graph cache — regenerable, not committed (run `graft build`).
 /graft/
+
+# Local execution ledger (working memory, not part of the deliverable).
+/.superpowers/

@@ -1,6 +1,8 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import PublicLayout from '../components/layout/PublicLayout';
 import AdminLayout from '../components/admin/AdminLayout';
+import ProtectedRoute from '../components/auth/ProtectedRoute';
+import Login from '../pages/Login';
 import Home from '../pages/Home';
 import Properties from '../pages/Properties';
 import PropertyDetails from '../pages/PropertyDetails';
@@ -15,6 +17,8 @@ import AdminPropertyEdit from '../pages/admin/AdminPropertyEdit';
 export default function AppRoutes() {
   return (
     <Routes>
+      <Route path="/login" element={<Login />} />
+
       <Route element={<PublicLayout />}>
         <Route index element={<Home />} />
         <Route path="properties" element={<Properties />} />
@@ -26,11 +30,34 @@ export default function AppRoutes() {
         <Route path="*" element={<NotFound />} />
       </Route>
 
-      <Route path="/admin" element={<AdminLayout />}>
-        <Route index element={<Navigate to="properties" replace />} />
-        <Route path="properties" element={<AdminProperties />} />
-        <Route path="properties/new" element={<AdminPropertyCreate />} />
-        <Route path="properties/:id/edit" element={<AdminPropertyEdit />} />
+      <Route path="/admin" element={<ProtectedRoute />}>
+        <Route element={<AdminLayout />}>
+          <Route index element={<Navigate to="properties" replace />} />
+          <Route
+            path="properties"
+            element={
+              <ProtectedRoute permission="properties.view">
+                <AdminProperties />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="properties/new"
+            element={
+              <ProtectedRoute permission="properties.manage">
+                <AdminPropertyCreate />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="properties/:id/edit"
+            element={
+              <ProtectedRoute permission="properties.manage">
+                <AdminPropertyEdit />
+              </ProtectedRoute>
+            }
+          />
+        </Route>
       </Route>
     </Routes>
   );

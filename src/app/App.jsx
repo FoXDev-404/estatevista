@@ -1,3 +1,4 @@
+import AuthProvider from '../context/AuthProvider';
 import PropertyProvider from '../context/PropertyProvider';
 import ToastProvider from '../context/ToastProvider';
 import AppRoutes from './router';
@@ -5,9 +6,11 @@ import AppRoutes from './router';
 export default function App() {
   return (
     <ToastProvider>
-      <PropertyProvider>
-        <AppRoutes />
-      </PropertyProvider>
+      <AuthProvider>
+        <PropertyProvider>
+          <AppRoutes />
+        </PropertyProvider>
+      </AuthProvider>
     </ToastProvider>
   );
 }

@@ -73,13 +73,29 @@ Updated: 2026-11-16
 - Full 144-permission catalogue and role edit screen were not enumerated.
 - Multi-branch data scoping was not exercised (demo users have no branch).
 
-## Phase 2 — Plan (awaiting approval)
+## Phase 2 — Plan (approved 2026-11-16)
 
 - Plan written in `07-implementation-plan.md`.
-- Recommended scope: Release 1 — Core Operations MVP (auth/tenancy/permissions, settings, inventory, CRM, sales, rental, dashboard v1, public lead bridge).
+- Approved scope: Release 1 — Core Operations MVP (auth/tenancy/permissions, settings, inventory, CRM, sales, rental, dashboard v1, public lead bridge).
 - Deferred: accounting/finance, purchasing/construction, HR, gateways, full website CMS, notifications beyond in-app.
-- No application code will be written until the user confirms scope, auth approach, admin URL, legacy listing handling and dev seed.
+- Decisions locked: DB sessions with scrypt; admin workspace at `/admin`; legacy public properties retained; small fictional dev company seeded from env; versioned SQL migrations.
 
-## Phase 3 — Implement (pending approval)
+## Phase 3 — Implement (in progress)
+
+Branch: `feat/r1-core-ops`. Work is tracked in `.superpowers/sdd/07-implementation-plan/progress.md`.
+
+- [x] WP0 — Foundation schema, ordered migration runner, API error contract, server test harness, helpers.
+- [x] WP1 — Auth, tenancy, roles, CSRF, login/guard, admin shell, protected legacy mutations.
+  - Server: scrypt hashes, hashed session tokens, throttling, `/api/auth/*`, `requireAuth` / `requirePermission` / `requireCsrf`, company scoping.
+  - Client: `/login`, `AuthProvider`, `ProtectedRoute`, guarded `/admin/*`, user/company/role menu, permission-filtered nav.
+  - Seed: 68 permissions, 10 default roles, fictional dev company/admin from env (credentials not committed).
+  - Verification: lint clean; client 68 tests / 10 files; server 26 tests / 6 files; HTTP smoke and role-denial checks; browser login/logout/guard check.
+- [ ] WP2 — Settings, branches, team, roles, audit.
+- [ ] WP3 — Inventory.
+- [ ] WP4 — CRM.
+- [ ] WP5 — Sales engine.
+- [ ] WP6 — Rental.
+- [ ] WP7 — Dashboard v1 and notifications.
+- [ ] WP8 — Public bridge.
 
 ## Phase 4 — Verify (pending)

@@ -1,6 +1,6 @@
 import propertyRepository from './propertyRepository';
+import { ApiError, apiRequest } from './apiClient';
 
-const API_BASE = '/api';
 const isTestEnv = typeof process !== 'undefined' && process.env?.NODE_ENV === 'test';
 
 /**
@@ -9,9 +9,7 @@ const isTestEnv = typeof process !== 'undefined' && process.env?.NODE_ENV === 't
 export async function checkApiHealth() {
   if (isTestEnv) return { isAvailable: false, supabaseConfigured: false };
   try {
-    const res = await fetch(`${API_BASE}/health`, { signal: AbortSignal.timeout(2000) });
-    if (!res.ok) return { isAvailable: false, supabaseConfigured: false };
-    const data = await res.json();
+    const data = await apiRequest('/health', { timeout: 2000 });
     return {
       isAvailable: true,
       supabaseConfigured: Boolean(data.supabaseConfigured),
@@ -23,7 +21,7 @@ export async function checkApiHealth() {
 }
 
 /**
- * Fetch all properties from Supabase API.
+ * Fetch all properties from the API.
  */
 export async function getAllProperties(filters = {}) {
   if (isTestEnv) return propertyRepository.getAll();
@@ -37,15 +35,8 @@ export async function getAllProperties(filters = {}) {
   if (filters.search) params.set('search', filters.search);
 
   const queryString = params.toString();
-  const url = queryString ? `${API_BASE}/properties?${queryString}` : `${API_BASE}/properties`;
-
-  const res = await fetch(url);
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.error || 'Failed to fetch properties from Supabase.');
-  }
-
-  return await res.json();
+  const path = queryString ? `/properties?${queryString}` : '/properties';
+  return apiRequest(path, { timeout: 8000 });
 }
 
 /**
@@ -54,14 +45,9 @@ export async function getAllProperties(filters = {}) {
 export async function getPropertyByIdOrSlug(idOrSlug) {
   if (!idOrSlug) return null;
   try {
-    const res = await fetch(`${API_BASE}/properties/${encodeURIComponent(idOrSlug)}`, {
-      signal: AbortSignal.timeout(3000),
-    });
-    if (res.ok) {
-      return await res.json();
-    }
+    return await apiRequest(`/properties/${encodeURIComponent(idOrSlug)}`, { timeout: 3000 });
   } catch {
-    // Fallback to local repo
+    // Fall back to the local repository when the API is unavailable.
   }
 
   const isId = /^PROP-\d+$/i.test(String(idOrSlug).trim());
@@ -73,19 +59,7 @@ export async function getPropertyByIdOrSlug(idOrSlug) {
  */
 export async function createPropertyApi(record) {
   if (isTestEnv) return propertyRepository.create(record);
-
-  const res = await fetch(`${API_BASE}/properties`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(record),
-  });
-
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.error || 'Failed to create property in Supabase.');
-  }
-
-  return await res.json();
+  return apiRequest('/properties', { method: 'POST', body: record });
 }
 
 /**
@@ -93,19 +67,10 @@ export async function createPropertyApi(record) {
  */
 export async function updatePropertyApi(id, updates) {
   if (isTestEnv) return propertyRepository.update(id, updates);
-
-  const res = await fetch(`${API_BASE}/properties/${encodeURIComponent(id)}`, {
+  return apiRequest(`/properties/${encodeURIComponent(id)}`, {
     method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(updates),
+    body: updates,
   });
-
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.error || 'Failed to update property in Supabase.');
-  }
-
-  return await res.json();
 }
 
 /**
@@ -113,55 +78,31 @@ export async function updatePropertyApi(id, updates) {
  */
 export async function deletePropertyApi(id) {
   if (isTestEnv) return propertyRepository.remove(id);
-
-  const res = await fetch(`${API_BASE}/properties/${encodeURIComponent(id)}`, {
-    method: 'DELETE',
-  });
-
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.error || 'Failed to delete property in Supabase.');
-  }
-
-  return await res.json();
+  return apiRequest(`/properties/${encodeURIComponent(id)}`, { method: 'DELETE' });
 }
 
 /**
- * Reset properties to canonical seeds in Supabase.
+ * Reset properties to canonical seeds.
  */
 export async function resetPropertiesApi() {
   if (isTestEnv) return propertyRepository.reset();
-
-  const res = await fetch(`${API_BASE}/properties/reset`, {
-    method: 'POST',
-  });
-
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.error || 'Failed to reset properties in Supabase.');
-  }
-
-  return await res.json();
+  return apiRequest('/properties/reset', { method: 'POST' });
 }
 
 /**
- * Submit an enquiry or contact form to PostgreSQL via the Node API.
+ * Submit an enquiry or contact form.
  */
 export async function submitEnquiryApi(payload) {
   try {
-    const res = await fetch(`${API_BASE}/enquiries`, {
+    return await apiRequest('/enquiries', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-      signal: AbortSignal.timeout(4000),
+      body: payload,
+      timeout: 4000,
     });
-
-    if (res.ok) {
-      return await res.json();
+  } catch (error) {
+    if (error instanceof ApiError && error.status) {
+      return { success: false, error: error.message, fields: error.fields || null };
     }
-    const err = await res.json().catch(() => ({}));
-    return { success: false, error: err.error || 'Server error' };
-  } catch {
     return {
       success: true, // Graceful fallback simulation
       simulated: true,
@@ -171,7 +112,7 @@ export async function submitEnquiryApi(payload) {
 }
 
 /**
- * Upload an image file directly to Supabase Storage via the Node API.
+ * Upload an image file to storage via the API.
  */
 export async function uploadImageApi(file) {
   const base64Data = await new Promise((resolve, reject) => {
@@ -181,21 +122,13 @@ export async function uploadImageApi(file) {
     reader.readAsDataURL(file);
   });
 
-  const res = await fetch(`${API_BASE}/upload`, {
+  return apiRequest('/upload', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
+    body: {
       filename: file.name,
       data: base64Data,
-    }),
+    },
   });
-
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.error || 'Failed to upload image.');
-  }
-
-  return await res.json();
 }
 
 const propertyApiService = {
