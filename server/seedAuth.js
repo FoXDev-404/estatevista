@@ -3,6 +3,7 @@ import { config } from './lib/config.js';
 import { DEFAULT_ROLES, PERMISSIONS } from './auth/permissions.js';
 import { hashPassword } from './auth/password.js';
 import { SEQUENCE_DEFINITIONS } from './admin/catalog.js';
+import { DEFAULT_UNIT_TYPES } from './lib/inventory.js';
 
 async function upsertPermissions() {
   const { error } = await supabase
@@ -74,6 +75,17 @@ async function seedSettingsAndSequences(companyId) {
     .from('number_sequences')
     .upsert(rows, { onConflict: 'company_id,document_type', ignoreDuplicates: true });
   if (error) throw new Error(`number sequences: ${error.message}`);
+
+  const unitTypes = DEFAULT_UNIT_TYPES.map((name, index) => ({
+    company_id: companyId,
+    name,
+    sort_order: index + 1,
+  }));
+
+  const { error: unitTypeError } = await supabase
+    .from('unit_types')
+    .upsert(unitTypes, { onConflict: 'company_id,name', ignoreDuplicates: true });
+  if (unitTypeError) throw new Error(`unit types: ${unitTypeError.message}`);
 }
 
 async function seedRoles(companyId, permissions) {

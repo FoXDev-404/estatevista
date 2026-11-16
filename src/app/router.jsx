@@ -13,6 +13,10 @@ import NotFound from '../pages/NotFound';
 import AdminProperties from '../pages/admin/AdminProperties';
 import AdminPropertyCreate from '../pages/admin/AdminPropertyCreate';
 import AdminPropertyEdit from '../pages/admin/AdminPropertyEdit';
+import AdminProjects from '../pages/admin/AdminProjects';
+import AdminProjectForm from '../pages/admin/AdminProjectForm';
+import AdminProjectDetail from '../pages/admin/AdminProjectDetail';
+import AdminUnits from '../pages/admin/AdminUnits';
 import AdminSettings from '../pages/admin/AdminSettings';
 import AdminBranches from '../pages/admin/AdminBranches';
 import AdminTeam from '../pages/admin/AdminTeam';
@@ -60,6 +64,46 @@ export default function AppRoutes() {
             element={
               <ProtectedRoute permission="properties.manage">
                 <AdminPropertyEdit />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="projects"
+            element={
+              <ProtectedRoute permission="projects.view">
+                <AdminProjects />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="projects/new"
+            element={
+              <ProtectedRoute permission="projects.create">
+                <AdminProjectForm />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="projects/:id"
+            element={
+              <ProtectedRoute permission="projects.view">
+                <AdminProjectDetail />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="projects/:id/edit"
+            element={
+              <ProtectedRoute permission="projects.edit">
+                <AdminProjectForm />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="units"
+            element={
+              <ProtectedRoute permission="units.view">
+                <AdminUnits />
               </ProtectedRoute>
             }
           />

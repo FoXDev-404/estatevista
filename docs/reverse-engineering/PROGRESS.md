@@ -94,7 +94,12 @@ Branch: `feat/r1-core-ops`. Work is tracked in `.superpowers/sdd/07-implementati
   - Server: `/api/settings`, `/api/branches`, `/api/team`, `/api/roles`, `/api/audit-logs`, `/api/lookups`; audit snapshots for every change; 30-sequence catalog and 70-key permission catalog.
   - Client: profile/localization/numbering tabs, branch CRUD, team invite/edit/status with self-protection, grouped role matrix with select-all and live count, audit filters and before/after diff modal; grouped sidebar with mobile drawer.
   - Verification: lint clean; client 68 tests / 10 files; server 45 tests / 7 files. Browser cycles covered settings persistence, branch CRUD + Head Office delete `409`, team invite/edit/deactivate + cleanup, role create/edit/delete and delete blocks, audit filters/diff, permission denial (`403` UI/API), mobile drawer and 1440 px desktop layout.
-- [ ] WP3 — Inventory.
+- [x] WP3 — Inventory.
+  - Server: project/building/floor/unit CRUD, status transitions and history, bulk numbering, private documents, unit-type lookups; company-scoped and permission-guarded. Project and unit deletes are soft; project delete blocked with units, unit delete blocked by active contracts.
+  - Migration `008_inventory_defaults.sql` seeds seven unit types and the private `documents` bucket.
+  - Client: project card list with type/status filters, project create/edit/detail tabs, buildings and floors, generated and single units, status modal, unit history, document upload/list/delete.
+  - Verification: lint clean; client 74 tests / 12 files; server 62 tests / 9 files. Browser cycle covered project and building creation, generation of `A-101`…`A-202`, unit create/edit/status/history, building/floor delete guards, document upload/delete, unit delete, project delete `409`, and final cleanup deletes.
+  - Fixed during verification: unit create/update wrote nonexistent actor columns; stale “correct the highlighted fields” alert after file selection; soft-deleted units blocking building/floor deletion via foreign key.
 - [ ] WP4 — CRM.
 - [ ] WP5 — Sales engine.
 - [ ] WP6 — Rental.
