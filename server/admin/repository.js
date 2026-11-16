@@ -3,6 +3,11 @@ import { ApiError, notFound } from '../lib/errors.js';
 import { writeAudit as writeAuditLog } from '../lib/audit.js';
 import { sortSequences } from './catalog.js';
 import { installmentStatus, nextDueInstallment, roundMoney } from '../lib/sales.js';
+import {
+  depositHeld,
+  rentScheduleView,
+  rentSummary,
+} from '../lib/rental.js';
 
 function fail(context, error) {
   console.error(`[admin] ${context}:`, error?.message || error);
@@ -28,9 +33,17 @@ const SALE_SELECT =
 const INSTALLMENT_SELECT =
   '*, sale:sales!installments_sale_id_fkey(id, number, customer_id, unit_id, net_price, customer:customers(id, name), unit:units(id, unit_number, project_id), plan:installment_plans(grace_days))';
 const RECEIPT_SELECT =
-  '*, customer:customers(id, name), allocations:receipt_allocations(id, installment_id, amount, installment:installments(id, sequence, due_date, amount, sale:sales(id, number)))';
+  '*, customer:customers(id, name), tenant:tenants!receipts_tenant_id_fkey(id, name), allocations:receipt_allocations(id, installment_id, rent_schedule_id, amount, installment:installments(id, sequence, due_date, amount, sale:sales(id, number)), rent_schedule:rent_schedules(id, period_label, period_start, due_date, lease:leases(id, number)))';
 const COMMISSION_SELECT =
   '*, sale:sales(id, number, net_price), salesperson:users!sales_commissions_salesperson_id_fkey(id, name), rule:commission_rules(id, name)';
+const TENANT_SELECT =
+  '*, leases:leases(id, number, status, start_date, end_date, unit_id, unit:units(id, unit_number), schedules:rent_schedules(*))';
+const LEASE_SELECT =
+  '*, tenant:tenants(id, name, phone, email), unit:units(id, unit_number, status, project_id, project:projects(id, name)), deposit:security_deposits(*), schedules:rent_schedules(*)';
+const RENT_SCHEDULE_SELECT =
+  '*, lease:leases(id, number, status, tenant_id, unit_id, grace_days, tenant:tenants(id, name, phone), unit:units(id, unit_number, project_id, project:projects(id, name)))';
+const DEPOSIT_SELECT =
+  '*, lease:leases(id, number, status, start_date, end_date, tenant_id, unit_id, tenant:tenants(id, name, phone), unit:units(id, unit_number)), transactions:deposit_transactions(*)';
 
 /**
  * Supabase-backed persistence for company settings, branches, team, roles and
@@ -1833,9 +1846,15 @@ export class SupabaseAdminRepository {
       sale: allocation.installment?.sale
         ? { id: allocation.installment.sale.id, number: allocation.installment.sale.number }
         : null,
+      lease: allocation.rent_schedule?.lease
+        ? {
+            id: allocation.rent_schedule.lease.id,
+            number: allocation.rent_schedule.lease.number,
+          }
+        : null,
     }));
     const settles = allocations
-      .map((row) => row.sale?.number)
+      .map((allocation) => allocation.sale?.number || allocation.lease?.number)
       .filter((value, index, all) => value && all.indexOf(value) === index)
       .join(', ');
     return { ...row, allocations, settles };
@@ -1903,6 +1922,474 @@ export class SupabaseAdminRepository {
       fail('voidReceipt', error);
     }
     return this.getReceipt(companyId, data);
+  }
+
+  // --- Rental ---------------------------------------------------------
+
+  depositView(row) {
+    if (!row) return null;
+    return {
+      ...row,
+      held_amount: depositHeld(row),
+      transactions: [...(row.transactions || [])].sort((a, b) =>
+        String(b.created_at).localeCompare(String(a.created_at)),
+      ),
+    };
+  }
+
+  leaseSummary(row) {
+    if (!row) return null;
+    const today = new Date().toISOString().slice(0, 10);
+    const graceDays = Number(row.grace_days || 0);
+    const schedules = [...(row.schedules || [])]
+      .sort((a, b) => String(a.period_start).localeCompare(String(b.period_start)))
+      .map((schedule) => rentScheduleView(schedule, { today, graceDays }));
+    const depositRow = Array.isArray(row.deposit) ? row.deposit[0] : row.deposit;
+    return {
+      ...row,
+      deposit: depositRow ? this.depositView(depositRow) : null,
+      schedules,
+      ...rentSummary(schedules, { today }),
+      days_remaining: Math.ceil(
+        (Date.parse(`${row.end_date}T00:00:00.000Z`) - Date.parse(`${today}T00:00:00.000Z`)) /
+          86400000,
+      ),
+    };
+  }
+
+  tenantSummary(row) {
+    if (!row) return null;
+    const today = new Date().toISOString().slice(0, 10);
+    const leases = (row.leases || []).filter((lease) => !lease.deleted_at);
+    const active = leases.find((lease) => lease.status === 'active') || null;
+    const schedules = active
+      ? [...(active.schedules || [])]
+          .sort((a, b) => String(a.period_start).localeCompare(String(b.period_start)))
+          .map((schedule) =>
+            rentScheduleView(schedule, {
+              today,
+              graceDays: Number(active.grace_days || 0),
+            }),
+          )
+      : [];
+    const summary = rentSummary(schedules, { today });
+    return {
+      ...row,
+      leases: leases.map((lease) => ({
+        id: lease.id,
+        number: lease.number,
+        status: lease.status,
+        start_date: lease.start_date,
+        end_date: lease.end_date,
+      })),
+      current_lease: active
+        ? {
+            id: active.id,
+            number: active.number,
+            status: active.status,
+            end_date: active.end_date,
+            unit: active.unit || null,
+            balance_due: summary.balance_due,
+          }
+        : null,
+      current_unit: active?.unit?.unit_number || null,
+      lease_ends: active?.end_date || null,
+      balance_due: summary.balance_due,
+    };
+  }
+
+  rentRollSummary(row) {
+    if (!row) return null;
+    const lease = row.lease || null;
+    const view = rentScheduleView(row, {
+      today: new Date().toISOString().slice(0, 10),
+      graceDays: Number(lease?.grace_days || 0),
+    });
+    return {
+      ...view,
+      lease_id: lease?.id || row.lease_id || null,
+      lease_number: lease?.number || null,
+      lease_status: lease?.status || null,
+      tenant_id: lease?.tenant_id || null,
+      tenant: lease?.tenant || null,
+      unit: lease?.unit || null,
+      project: lease?.unit?.project || null,
+    };
+  }
+
+  async listTenants(companyId) {
+    const { data, error } = await this.client()
+      .from('tenants')
+      .select(TENANT_SELECT)
+      .eq('company_id', companyId)
+      .is('deleted_at', null)
+      .order('name');
+    if (error) fail('listTenants', error);
+    return (data || []).map((row) => this.tenantSummary(row));
+  }
+
+  async getTenant(companyId, id) {
+    const { data, error } = await this.client()
+      .from('tenants')
+      .select(TENANT_SELECT)
+      .eq('company_id', companyId)
+      .eq('id', id)
+      .is('deleted_at', null)
+      .maybeSingle();
+    if (error) fail('getTenant', error);
+    return this.tenantSummary(data);
+  }
+
+  async createTenant(companyId, patch) {
+    const { data, error } = await this.client()
+      .from('tenants')
+      .insert({ company_id: companyId, ...patch })
+      .select('id')
+      .single();
+    if (error) fail('createTenant', error);
+    return this.getTenant(companyId, data.id);
+  }
+
+  async updateTenant(companyId, id, patch) {
+    const { data, error } = await this.client()
+      .from('tenants')
+      .update({ ...patch, updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .eq('company_id', companyId)
+      .is('deleted_at', null)
+      .select('id')
+      .maybeSingle();
+    if (error) fail('updateTenant', error);
+    if (!data) throw notFound('Tenant not found.');
+    return this.getTenant(companyId, data.id);
+  }
+
+  async deleteTenant(companyId, id) {
+    const { data, error } = await this.client()
+      .from('tenants')
+      .update({ deleted_at: new Date().toISOString() })
+      .eq('id', id)
+      .eq('company_id', companyId)
+      .is('deleted_at', null)
+      .select('id')
+      .maybeSingle();
+    if (error) fail('deleteTenant', error);
+    if (!data) throw notFound('Tenant not found.');
+  }
+
+  async countTenantActiveLeases(companyId, tenantId) {
+    const { count, error } = await this.client()
+      .from('leases')
+      .select('id', { count: 'exact', head: true })
+      .eq('company_id', companyId)
+      .eq('tenant_id', tenantId)
+      .eq('status', 'active')
+      .is('deleted_at', null);
+    if (error) fail('countTenantActiveLeases', error);
+    return count || 0;
+  }
+
+  async listLeases(companyId) {
+    const { data, error } = await this.client()
+      .from('leases')
+      .select(LEASE_SELECT)
+      .eq('company_id', companyId)
+      .is('deleted_at', null)
+      .order('start_date', { ascending: false });
+    if (error) fail('listLeases', error);
+    return (data || []).map((row) => this.leaseSummary(row));
+  }
+
+  async getLease(companyId, id) {
+    const { data, error } = await this.client()
+      .from('leases')
+      .select(LEASE_SELECT)
+      .eq('company_id', companyId)
+      .eq('id', id)
+      .is('deleted_at', null)
+      .maybeSingle();
+    if (error) fail('getLease', error);
+    if (!data) return null;
+    const lease = this.leaseSummary(data);
+    const { data: nextLease, error: nextError } = await this.client()
+      .from('leases')
+      .select('id, number, status')
+      .eq('company_id', companyId)
+      .eq('previous_lease_id', id)
+      .is('deleted_at', null)
+      .maybeSingle();
+    if (nextError) fail('getNextLease', nextError);
+    return { ...lease, next_lease: nextLease || null };
+  }
+
+  async createLease(companyId, { lease, schedule = [], deposit = null }) {
+    const { data, error } = await this.client()
+      .from('leases')
+      .insert({ company_id: companyId, ...lease })
+      .select('id')
+      .single();
+    if (error) fail('createLease', error);
+
+    if (schedule.length) {
+      const { error: scheduleError } = await this.client().from('rent_schedules').insert(
+        schedule.map((row) => ({
+          company_id: companyId,
+          lease_id: data.id,
+          balance: row.rent_amount,
+          status: 'upcoming',
+          ...row,
+        })),
+      );
+      if (scheduleError) fail('createLeaseSchedules', scheduleError);
+    }
+
+    if (deposit) {
+      const { error: depositError } = await this.client()
+        .from('security_deposits')
+        .insert({ company_id: companyId, lease_id: data.id, ...deposit });
+      if (depositError) fail('createLeaseDeposit', depositError);
+    }
+
+    return this.getLease(companyId, data.id);
+  }
+
+  async updateLease(companyId, id, patch) {
+    const { data, error } = await this.client()
+      .from('leases')
+      .update({ ...patch, updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .eq('company_id', companyId)
+      .is('deleted_at', null)
+      .select('id')
+      .maybeSingle();
+    if (error) fail('updateLease', error);
+    if (!data) throw notFound('Lease not found.');
+    return this.getLease(companyId, data.id);
+  }
+
+  async findActiveLeaseForUnit(companyId, unitId, excludeId = null) {
+    let query = this.client()
+      .from('leases')
+      .select('id, number, status')
+      .eq('company_id', companyId)
+      .eq('unit_id', unitId)
+      .eq('status', 'active')
+      .is('deleted_at', null);
+    if (excludeId) query = query.neq('id', excludeId);
+    const { data, error } = await query.maybeSingle();
+    if (error) fail('findActiveLeaseForUnit', error);
+    return data || null;
+  }
+
+  async listRentSchedules(companyId) {
+    const { data, error } = await this.client()
+      .from('rent_schedules')
+      .select(RENT_SCHEDULE_SELECT)
+      .eq('company_id', companyId)
+      .order('due_date');
+    if (error) fail('listRentSchedules', error);
+    return (data || []).map((row) => this.rentRollSummary(row));
+  }
+
+  async getRentSchedule(companyId, id) {
+    const { data, error } = await this.client()
+      .from('rent_schedules')
+      .select(RENT_SCHEDULE_SELECT)
+      .eq('company_id', companyId)
+      .eq('id', id)
+      .maybeSingle();
+    if (error) fail('getRentSchedule', error);
+    return this.rentRollSummary(data);
+  }
+
+  async createRentSchedules(companyId, leaseId, rows) {
+    if (!rows.length) return [];
+    const { error } = await this.client()
+      .from('rent_schedules')
+      .insert(
+        rows.map((row) => ({
+          company_id: companyId,
+          lease_id: leaseId,
+          balance: row.rent_amount,
+          status: 'upcoming',
+          ...row,
+        })),
+      );
+    if (error) fail('createRentSchedules', error);
+    const { data, error: listError } = await this.client()
+      .from('rent_schedules')
+      .select(RENT_SCHEDULE_SELECT)
+      .eq('company_id', companyId)
+      .eq('lease_id', leaseId)
+      .order('period_start');
+    if (listError) fail('listCreatedRentSchedules', listError);
+    return (data || []).map((row) => this.rentRollSummary(row));
+  }
+
+  async updateRentSchedule(companyId, leaseId, scheduleId, patch) {
+    const { data, error } = await this.client()
+      .from('rent_schedules')
+      .update({ ...patch, updated_at: new Date().toISOString() })
+      .eq('id', scheduleId)
+      .eq('lease_id', leaseId)
+      .eq('company_id', companyId)
+      .select('id')
+      .maybeSingle();
+    if (error) fail('updateRentSchedule', error);
+    if (!data) throw notFound('Rent period not found.');
+    return this.getRentSchedule(companyId, data.id);
+  }
+
+  async createRentAdjustment(companyId, payload) {
+    const { data, error } = await this.client()
+      .from('rent_adjustments')
+      .insert({ company_id: companyId, ...payload })
+      .select('*')
+      .single();
+    if (error) fail('createRentAdjustment', error);
+    return data;
+  }
+
+  async listDeposits(companyId) {
+    const { data, error } = await this.client()
+      .from('security_deposits')
+      .select(DEPOSIT_SELECT)
+      .eq('company_id', companyId)
+      .order('created_at', { ascending: false });
+    if (error) fail('listDeposits', error);
+    return (data || []).map((row) => this.depositView(row));
+  }
+
+  async getDeposit(companyId, id) {
+    const { data, error } = await this.client()
+      .from('security_deposits')
+      .select(DEPOSIT_SELECT)
+      .eq('company_id', companyId)
+      .eq('id', id)
+      .maybeSingle();
+    if (error) fail('getDeposit', error);
+    return this.depositView(data);
+  }
+
+  async getDepositByLease(companyId, leaseId) {
+    const { data, error } = await this.client()
+      .from('security_deposits')
+      .select(DEPOSIT_SELECT)
+      .eq('company_id', companyId)
+      .eq('lease_id', leaseId)
+      .maybeSingle();
+    if (error) fail('getDepositByLease', error);
+    return this.depositView(data);
+  }
+
+  async createDeposit(companyId, payload) {
+    const { data, error } = await this.client()
+      .from('security_deposits')
+      .insert({ company_id: companyId, ...payload })
+      .select('id')
+      .single();
+    if (error) fail('createDeposit', error);
+    return this.getDeposit(companyId, data.id);
+  }
+
+  async updateDeposit(companyId, id, patch) {
+    const { data, error } = await this.client()
+      .from('security_deposits')
+      .update({ ...patch, updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .eq('company_id', companyId)
+      .select('id')
+      .maybeSingle();
+    if (error) fail('updateDeposit', error);
+    if (!data) throw notFound('Security deposit not found.');
+    return this.getDeposit(companyId, data.id);
+  }
+
+  async createDepositTransaction(companyId, payload) {
+    const { data, error } = await this.client()
+      .from('deposit_transactions')
+      .insert({ company_id: companyId, ...payload })
+      .select('*')
+      .single();
+    if (error) fail('createDepositTransaction', error);
+    return data;
+  }
+
+  async listDepositTransactions(companyId, depositId) {
+    const { data, error } = await this.client()
+      .from('deposit_transactions')
+      .select('*')
+      .eq('company_id', companyId)
+      .eq('deposit_id', depositId)
+      .order('created_at', { ascending: false });
+    if (error) fail('listDepositTransactions', error);
+    return data || [];
+  }
+
+  async listRentReceipts(companyId) {
+    const { data, error } = await this.client()
+      .from('receipts')
+      .select(RECEIPT_SELECT)
+      .eq('company_id', companyId)
+      .not('tenant_id', 'is', null)
+      .order('received_on', { ascending: false });
+    if (error) fail('listRentReceipts', error);
+    return (data || []).map((row) => this.receiptView(row));
+  }
+
+  async getRentReceipt(companyId, id) {
+    const { data, error } = await this.client()
+      .from('receipts')
+      .select(RECEIPT_SELECT)
+      .eq('company_id', companyId)
+      .eq('id', id)
+      .not('tenant_id', 'is', null)
+      .maybeSingle();
+    if (error) fail('getRentReceipt', error);
+    return this.receiptView(data);
+  }
+
+  async createRentReceipt(companyId, payload) {
+    const { allocations = [], ...input } = payload;
+    const { data, error } = await this.client().rpc('post_rent_receipt', {
+      p_company_id: companyId,
+      p_tenant_id: input.tenant_id,
+      p_number: input.number,
+      p_received_on: input.received_on,
+      p_amount: input.amount,
+      p_reference: input.reference || null,
+      p_notes: input.notes || null,
+      p_created_by: input.created_by || null,
+      p_allocations: allocations.map((row) => ({
+        rent_schedule_id: row.rent_schedule_id,
+        amount: row.amount,
+      })),
+    });
+    if (error) {
+      const message = String(error.message || '');
+      if (/balance|allocation|rent|amount|equal/i.test(message)) {
+        throw new ApiError(422, message.replace(/^.*?ERROR:\s*/i, ''));
+      }
+      fail('createRentReceipt', error);
+    }
+    return this.getRentReceipt(companyId, data);
+  }
+
+  async voidRentReceipt(companyId, id, { reason, userId }) {
+    const { data, error } = await this.client().rpc('void_rent_receipt', {
+      p_company_id: companyId,
+      p_receipt_id: id,
+      p_reason: reason || null,
+      p_user_id: userId || null,
+    });
+    if (error) {
+      const message = String(error.message || '');
+      if (/void|receipt|completed/i.test(message)) {
+        throw new ApiError(422, message.replace(/^.*?ERROR:\s*/i, ''));
+      }
+      fail('voidRentReceipt', error);
+    }
+    return this.getRentReceipt(companyId, data);
   }
 
   async listCommissionRules(companyId) {

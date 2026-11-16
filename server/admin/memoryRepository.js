@@ -2,6 +2,11 @@ import { randomUUID } from 'node:crypto';
 import { ApiError, notFound } from '../lib/errors.js';
 import { formatSequencePreview, sortSequences } from './catalog.js';
 import { installmentStatus, nextDueInstallment, roundMoney } from '../lib/sales.js';
+import {
+  depositHeld,
+  rentScheduleView,
+  rentSummary,
+} from '../lib/rental.js';
 
 /**
  * In-memory implementation of the admin repository contract. It mirrors the
@@ -35,6 +40,12 @@ export class MemoryAdminRepository {
     receiptAllocations = [],
     commissionRules = [],
     salesCommissions = [],
+    tenants = [],
+    leases = [],
+    rentSchedules = [],
+    rentAdjustments = [],
+    securityDeposits = [],
+    depositTransactions = [],
     team = [],
     roles = [],
     rolePermissions = {},
@@ -63,6 +74,12 @@ export class MemoryAdminRepository {
     this.receiptAllocations = receiptAllocations.map((row) => ({ ...row }));
     this.commissionRules = commissionRules.map((row) => ({ ...row }));
     this.salesCommissions = salesCommissions.map((row) => ({ ...row }));
+    this.tenants = tenants.map((row) => ({ ...row }));
+    this.leases = leases.map((row) => ({ ...row }));
+    this.rentSchedules = rentSchedules.map((row) => ({ ...row }));
+    this.rentAdjustments = rentAdjustments.map((row) => ({ ...row }));
+    this.securityDeposits = securityDeposits.map((row) => ({ ...row }));
+    this.depositTransactions = depositTransactions.map((row) => ({ ...row }));
     this.unitStatusHistory = [];
     this.unitContracts = new Map();
     this.team = team.map((row) => ({ ...row, roles: [...(row.roles || [])] }));
@@ -1134,9 +1151,31 @@ export class MemoryAdminRepository {
 
   receiptSummary(companyId, receipt) {
     const customer = this.customers.find((row) => row.id === receipt.customer_id) || null;
+    const tenant = this.tenants.find((row) => row.id === receipt.tenant_id) || null;
     const allocations = this.receiptAllocations
       .filter((row) => row.receipt_id === receipt.id)
       .map((allocation) => {
+        if (allocation.rent_schedule_id) {
+          const schedule =
+            this.rentSchedules.find((row) => row.id === allocation.rent_schedule_id) || null;
+          const lease = schedule
+            ? this.leases.find((row) => row.id === schedule.lease_id) || null
+            : null;
+          return {
+            ...allocation,
+            installment: null,
+            rent_schedule: schedule
+              ? {
+                  id: schedule.id,
+                  period_label: schedule.period_label,
+                  period_start: schedule.period_start,
+                  due_date: schedule.due_date,
+                  rent_amount: schedule.rent_amount,
+                }
+              : null,
+            lease: lease ? { id: lease.id, number: lease.number } : null,
+          };
+        }
         const installment = this.installments.find((row) => row.id === allocation.installment_id);
         const sale = installment
           ? this.sales.find((row) => row.id === installment.sale_id)
@@ -1151,15 +1190,17 @@ export class MemoryAdminRepository {
                 amount: installment.amount,
               }
             : null,
+          rent_schedule: null,
           sale: sale ? { id: sale.id, number: sale.number } : null,
         };
       });
     return {
       ...receipt,
       customer: customer ? { id: customer.id, name: customer.name } : null,
+      tenant: tenant ? { id: tenant.id, name: tenant.name } : null,
       allocations,
       settles: allocations
-        .map((row) => row.sale?.number)
+        .map((row) => row.sale?.number || row.lease?.number)
         .filter((value, index, all) => value && all.indexOf(value) === index)
         .join(', '),
     };
@@ -1382,6 +1423,478 @@ export class MemoryAdminRepository {
     if (!commission) throw notFound('Commission entry not found.');
     Object.assign(commission, patch, { updated_at: new Date().toISOString() });
     return this.commissionSummary(companyId, commission);
+  }
+
+  // --- Rental ---------------------------------------------------------
+
+  rentScheduleDetail(companyId, schedule) {
+    const lease = this.leases.find((row) => row.id === schedule.lease_id) || null;
+    return rentScheduleView(schedule, {
+      today: new Date().toISOString().slice(0, 10),
+      graceDays: lease?.grace_days || 0,
+    });
+  }
+
+  rentRollSummary(companyId, schedule) {
+    const lease = this.leases.find((row) => row.id === schedule.lease_id) || null;
+    const tenant = lease
+      ? this.tenants.find((row) => row.id === lease.tenant_id) || null
+      : null;
+    const unit = lease ? this.units.find((row) => row.id === lease.unit_id) || null : null;
+    const project = unit ? this.projects.find((row) => row.id === unit.project_id) || null : null;
+    return {
+      ...this.rentScheduleDetail(companyId, schedule),
+      lease_number: lease?.number || null,
+      lease_id: lease?.id || null,
+      lease_status: lease?.status || null,
+      tenant_id: tenant?.id || null,
+      tenant: tenant ? { id: tenant.id, name: tenant.name, phone: tenant.phone } : null,
+      unit: unit ? this.unitSummary(unit) : null,
+      project: project ? { id: project.id, name: project.name } : null,
+    };
+  }
+
+  depositSummary(companyId, deposit) {
+    const lease = this.leases.find((row) => row.id === deposit.lease_id) || null;
+    const tenant = lease
+      ? this.tenants.find((row) => row.id === lease.tenant_id) || null
+      : null;
+    const unit = lease ? this.units.find((row) => row.id === lease.unit_id) || null : null;
+    return {
+      ...deposit,
+      held_amount: depositHeld(deposit),
+      lease: lease
+        ? {
+            id: lease.id,
+            number: lease.number,
+            status: lease.status,
+            start_date: lease.start_date,
+            end_date: lease.end_date,
+          }
+        : null,
+      tenant: tenant ? { id: tenant.id, name: tenant.name, phone: tenant.phone } : null,
+      unit: unit ? { id: unit.id, unit_number: unit.unit_number } : null,
+      transactions: this.depositTransactions
+        .filter((row) => row.deposit_id === deposit.id)
+        .sort((a, b) => String(b.created_at).localeCompare(String(a.created_at))),
+    };
+  }
+
+  leaseSummary(companyId, lease) {
+    const tenant = this.tenants.find((row) => row.id === lease.tenant_id) || null;
+    const unit = this.units.find((row) => row.id === lease.unit_id && !row.deleted_at) || null;
+    const schedules = this.rentSchedules
+      .filter((row) => row.lease_id === lease.id)
+      .sort((a, b) => String(a.period_start).localeCompare(String(b.period_start)))
+      .map((row) => this.rentScheduleDetail(companyId, row));
+    const summary = rentSummary(schedules, {
+      today: new Date().toISOString().slice(0, 10),
+    });
+    const deposit = this.securityDeposits.find((row) => row.lease_id === lease.id) || null;
+    const nextLease =
+      this.leases.find((row) => row.previous_lease_id === lease.id && !row.deleted_at) || null;
+    const today = new Date().toISOString().slice(0, 10);
+    return {
+      ...lease,
+      tenant: tenant ? { id: tenant.id, name: tenant.name, phone: tenant.phone, email: tenant.email } : null,
+      unit: unit ? this.unitSummary(unit) : null,
+      schedules,
+      ...summary,
+      deposit: deposit ? this.depositSummary(companyId, deposit) : null,
+      next_lease: nextLease
+        ? { id: nextLease.id, number: nextLease.number, status: nextLease.status }
+        : null,
+      days_remaining: Math.ceil(
+        (Date.parse(`${lease.end_date}T00:00:00.000Z`) - Date.parse(`${today}T00:00:00.000Z`)) /
+          86400000,
+      ),
+    };
+  }
+
+  tenantSummary(companyId, tenant) {
+    const leases = this.leases.filter(
+      (row) => row.company_id === companyId && row.tenant_id === tenant.id && !row.deleted_at,
+    );
+    const active = leases.find((row) => row.status === 'active') || null;
+    const activeLease = active ? this.leaseSummary(companyId, active) : null;
+    return {
+      ...tenant,
+      current_lease: activeLease
+        ? {
+            id: activeLease.id,
+            number: activeLease.number,
+            status: activeLease.status,
+            end_date: activeLease.end_date,
+            unit: activeLease.unit,
+            balance_due: activeLease.balance_due,
+          }
+        : null,
+      current_unit: activeLease?.unit?.unit_number || null,
+      lease_ends: activeLease?.end_date || null,
+      balance_due: activeLease?.balance_due || 0,
+      leases: leases.map((row) => ({
+        id: row.id,
+        number: row.number,
+        status: row.status,
+        start_date: row.start_date,
+        end_date: row.end_date,
+      })),
+    };
+  }
+
+  async listTenants(companyId) {
+    return this.tenants
+      .filter((row) => row.company_id === companyId && !row.deleted_at)
+      .map((row) => this.tenantSummary(companyId, row))
+      .sort((a, b) => String(a.name).localeCompare(String(b.name)));
+  }
+
+  async getTenant(companyId, id) {
+    const tenant = this.tenants.find(
+      (row) => row.company_id === companyId && row.id === id && !row.deleted_at,
+    );
+    return tenant ? this.tenantSummary(companyId, tenant) : null;
+  }
+
+  async createTenant(companyId, patch) {
+    const row = {
+      id: randomUUID(),
+      company_id: companyId,
+      type: 'individual',
+      is_active: true,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      deleted_at: null,
+      ...patch,
+    };
+    this.tenants.push(row);
+    return this.tenantSummary(companyId, row);
+  }
+
+  async updateTenant(companyId, id, patch) {
+    const tenant = this.tenants.find(
+      (row) => row.company_id === companyId && row.id === id && !row.deleted_at,
+    );
+    if (!tenant) throw notFound('Tenant not found.');
+    Object.assign(tenant, patch, { updated_at: new Date().toISOString() });
+    return this.tenantSummary(companyId, tenant);
+  }
+
+  async deleteTenant(companyId, id) {
+    const tenant = this.tenants.find(
+      (row) => row.company_id === companyId && row.id === id && !row.deleted_at,
+    );
+    if (!tenant) throw notFound('Tenant not found.');
+    tenant.deleted_at = new Date().toISOString();
+    tenant.updated_at = tenant.deleted_at;
+  }
+
+  async countTenantActiveLeases(companyId, tenantId) {
+    return this.leases.filter(
+      (row) =>
+        row.company_id === companyId &&
+        row.tenant_id === tenantId &&
+        row.status === 'active' &&
+        !row.deleted_at,
+    ).length;
+  }
+
+  async listLeases(companyId) {
+    return this.leases
+      .filter((row) => row.company_id === companyId && !row.deleted_at)
+      .map((row) => this.leaseSummary(companyId, row))
+      .sort((a, b) => String(b.start_date).localeCompare(String(a.start_date)));
+  }
+
+  async getLease(companyId, id) {
+    const lease = this.leases.find(
+      (row) => row.company_id === companyId && row.id === id && !row.deleted_at,
+    );
+    return lease ? this.leaseSummary(companyId, lease) : null;
+  }
+
+  async createLease(companyId, { lease, schedule = [], deposit = null }) {
+    const leaseRow = {
+      id: randomUUID(),
+      company_id: companyId,
+      status: 'draft',
+      utilities_included: [],
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      deleted_at: null,
+      ...lease,
+    };
+    this.leases.push(leaseRow);
+
+    for (const row of schedule) {
+      this.rentSchedules.push({
+        id: randomUUID(),
+        company_id: companyId,
+        lease_id: leaseRow.id,
+        adjustments: 0,
+        late_fee: 0,
+        paid_amount: 0,
+        balance: roundMoney(row.rent_amount),
+        status: 'upcoming',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        ...row,
+      });
+    }
+
+    if (deposit) {
+      this.securityDeposits.push({
+        id: randomUUID(),
+        company_id: companyId,
+        lease_id: leaseRow.id,
+        received_amount: 0,
+        deducted_amount: 0,
+        refunded_amount: 0,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        ...deposit,
+      });
+    }
+
+    return this.leaseSummary(companyId, leaseRow);
+  }
+
+  async updateLease(companyId, id, patch) {
+    const lease = this.leases.find(
+      (row) => row.company_id === companyId && row.id === id && !row.deleted_at,
+    );
+    if (!lease) throw notFound('Lease not found.');
+    Object.assign(lease, patch, { updated_at: new Date().toISOString() });
+    return this.leaseSummary(companyId, lease);
+  }
+
+  async findActiveLeaseForUnit(companyId, unitId, excludeId = null) {
+    return (
+      this.leases.find(
+        (row) =>
+          row.company_id === companyId &&
+          row.unit_id === unitId &&
+          row.status === 'active' &&
+          row.id !== excludeId &&
+          !row.deleted_at,
+      ) || null
+    );
+  }
+
+  async listRentSchedules(companyId) {
+    return this.rentSchedules
+      .filter((row) => row.company_id === companyId)
+      .map((row) => this.rentRollSummary(companyId, row))
+      .sort((a, b) => String(a.due_date).localeCompare(String(b.due_date)));
+  }
+
+  async getRentSchedule(companyId, id) {
+    const schedule = this.rentSchedules.find(
+      (row) => row.company_id === companyId && row.id === id,
+    );
+    return schedule ? this.rentRollSummary(companyId, schedule) : null;
+  }
+
+  async createRentSchedules(companyId, leaseId, rows) {
+    const lease = this.leases.find(
+      (row) => row.company_id === companyId && row.id === leaseId && !row.deleted_at,
+    );
+    if (!lease) throw notFound('Lease not found.');
+    for (const row of rows) {
+      this.rentSchedules.push({
+        id: randomUUID(),
+        company_id: companyId,
+        lease_id: leaseId,
+        adjustments: 0,
+        late_fee: 0,
+        paid_amount: 0,
+        balance: roundMoney(row.rent_amount),
+        status: 'upcoming',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        ...row,
+      });
+    }
+    return this.listLeaseSchedules(companyId, leaseId);
+  }
+
+  listLeaseSchedules(companyId, leaseId) {
+    return this.rentSchedules
+      .filter((row) => row.company_id === companyId && row.lease_id === leaseId)
+      .sort((a, b) => String(a.period_start).localeCompare(String(b.period_start)))
+      .map((row) => this.rentScheduleDetail(companyId, row));
+  }
+
+  async updateRentSchedule(companyId, leaseId, scheduleId, patch) {
+    const schedule = this.rentSchedules.find(
+      (row) =>
+        row.company_id === companyId && row.lease_id === leaseId && row.id === scheduleId,
+    );
+    if (!schedule) throw notFound('Rent period not found.');
+    Object.assign(schedule, patch, { updated_at: new Date().toISOString() });
+    return this.rentScheduleDetail(companyId, schedule);
+  }
+
+  async createRentAdjustment(companyId, payload) {
+    const row = {
+      id: randomUUID(),
+      company_id: companyId,
+      created_at: new Date().toISOString(),
+      ...payload,
+    };
+    this.rentAdjustments.push(row);
+    return { ...row };
+  }
+
+  async listDeposits(companyId) {
+    return this.securityDeposits
+      .filter((row) => row.company_id === companyId)
+      .map((row) => this.depositSummary(companyId, row))
+      .sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)));
+  }
+
+  async getDeposit(companyId, id) {
+    const deposit = this.securityDeposits.find(
+      (row) => row.company_id === companyId && row.id === id,
+    );
+    return deposit ? this.depositSummary(companyId, deposit) : null;
+  }
+
+  async getDepositByLease(companyId, leaseId) {
+    return (
+      this.securityDeposits.find(
+        (row) => row.company_id === companyId && row.lease_id === leaseId,
+      ) || null
+    );
+  }
+
+  async createDeposit(companyId, payload) {
+    const row = {
+      id: randomUUID(),
+      company_id: companyId,
+      received_amount: 0,
+      deducted_amount: 0,
+      refunded_amount: 0,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      ...payload,
+    };
+    this.securityDeposits.push(row);
+    return this.depositSummary(companyId, row);
+  }
+
+  async updateDeposit(companyId, id, patch) {
+    const deposit = this.securityDeposits.find(
+      (row) => row.company_id === companyId && row.id === id,
+    );
+    if (!deposit) throw notFound('Security deposit not found.');
+    Object.assign(deposit, patch, { updated_at: new Date().toISOString() });
+    return this.depositSummary(companyId, deposit);
+  }
+
+  async createDepositTransaction(companyId, payload) {
+    const row = {
+      id: randomUUID(),
+      company_id: companyId,
+      created_at: new Date().toISOString(),
+      ...payload,
+    };
+    this.depositTransactions.push(row);
+    return { ...row };
+  }
+
+  async listDepositTransactions(companyId, depositId) {
+    return this.depositTransactions
+      .filter((row) => row.company_id === companyId && row.deposit_id === depositId)
+      .sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)));
+  }
+
+  async listRentReceipts(companyId) {
+    return this.receipts
+      .filter((row) => row.company_id === companyId && row.tenant_id)
+      .map((row) => this.receiptSummary(companyId, row))
+      .sort((a, b) => String(b.received_on).localeCompare(String(a.received_on)));
+  }
+
+  async getRentReceipt(companyId, id) {
+    const receipt = this.receipts.find(
+      (row) => row.company_id === companyId && row.id === id && row.tenant_id,
+    );
+    return receipt ? this.receiptSummary(companyId, receipt) : null;
+  }
+
+  async createRentReceipt(companyId, payload) {
+    const { allocations = [], ...input } = payload;
+    const receipt = {
+      id: randomUUID(),
+      company_id: companyId,
+      status: 'completed',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      ...input,
+    };
+    this.receipts.push(receipt);
+
+    for (const allocation of allocations) {
+      const schedule = this.rentSchedules.find(
+        (row) => row.company_id === companyId && row.id === allocation.rent_schedule_id,
+      );
+      if (!schedule) throw notFound('Rent period not found.');
+      this.receiptAllocations.push({
+        id: randomUUID(),
+        company_id: companyId,
+        receipt_id: receipt.id,
+        rent_schedule_id: schedule.id,
+        amount: roundMoney(allocation.amount),
+        created_at: new Date().toISOString(),
+      });
+      schedule.paid_amount = roundMoney(
+        Number(schedule.paid_amount || 0) + Number(allocation.amount),
+      );
+      const total = roundMoney(
+        Number(schedule.rent_amount || 0) +
+          Number(schedule.adjustments || 0) +
+          Number(schedule.late_fee || 0),
+      );
+      schedule.balance = roundMoney(Math.max(0, total - schedule.paid_amount));
+      schedule.status = schedule.balance <= 0.005 ? 'paid' : 'partly_paid';
+      schedule.updated_at = new Date().toISOString();
+    }
+    return this.receiptSummary(companyId, receipt);
+  }
+
+  async voidRentReceipt(companyId, id, { reason, userId }) {
+    const receipt = this.receipts.find(
+      (row) => row.company_id === companyId && row.id === id && row.tenant_id,
+    );
+    if (!receipt) throw notFound('Receipt not found.');
+    if (receipt.status !== 'completed') {
+      throw new ApiError(422, 'Only a completed receipt can be voided.');
+    }
+    const allocations = this.receiptAllocations.filter(
+      (row) => row.receipt_id === receipt.id && row.rent_schedule_id,
+    );
+    for (const allocation of allocations) {
+      const schedule = this.rentSchedules.find((row) => row.id === allocation.rent_schedule_id);
+      if (!schedule) continue;
+      schedule.paid_amount = roundMoney(
+        Math.max(0, Number(schedule.paid_amount || 0) - Number(allocation.amount)),
+      );
+      const total = roundMoney(
+        Number(schedule.rent_amount || 0) +
+          Number(schedule.adjustments || 0) +
+          Number(schedule.late_fee || 0),
+      );
+      schedule.balance = roundMoney(Math.max(0, total - schedule.paid_amount));
+      schedule.status = schedule.paid_amount > 0.005 ? 'partly_paid' : 'upcoming';
+      schedule.updated_at = new Date().toISOString();
+    }
+    receipt.status = 'voided';
+    receipt.voided_at = new Date().toISOString();
+    receipt.void_reason = reason || null;
+    receipt.updated_at = receipt.voided_at;
+    receipt.voided_by = userId || null;
+    return this.receiptSummary(companyId, receipt);
   }
 
   visitSummary(companyId, visit) {

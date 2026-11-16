@@ -28,6 +28,12 @@ import AdminSaleDetail from '../pages/admin/AdminSaleDetail';
 import AdminInstallments from '../pages/admin/AdminInstallments';
 import AdminCollections from '../pages/admin/AdminCollections';
 import AdminCommissions from '../pages/admin/AdminCommissions';
+import AdminTenants from '../pages/admin/AdminTenants';
+import AdminLeases from '../pages/admin/AdminLeases';
+import AdminLeaseDetail from '../pages/admin/AdminLeaseDetail';
+import AdminRentRoll from '../pages/admin/AdminRentRoll';
+import AdminRentCollections from '../pages/admin/AdminRentCollections';
+import AdminDeposits from '../pages/admin/AdminDeposits';
 import AdminSettings from '../pages/admin/AdminSettings';
 import AdminBranches from '../pages/admin/AdminBranches';
 import AdminTeam from '../pages/admin/AdminTeam';
@@ -203,6 +209,54 @@ export default function AppRoutes() {
             element={
               <ProtectedRoute permission="commissions.view">
                 <AdminCommissions />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="tenants"
+            element={
+              <ProtectedRoute permission="tenants.view">
+                <AdminTenants />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="leases"
+            element={
+              <ProtectedRoute permission="leases.view">
+                <AdminLeases />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="leases/:id"
+            element={
+              <ProtectedRoute permission="leases.view">
+                <AdminLeaseDetail />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="rent-roll"
+            element={
+              <ProtectedRoute permission="rent.view">
+                <AdminRentRoll />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="rent-collections"
+            element={
+              <ProtectedRoute permission="rent.view">
+                <AdminRentCollections />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="deposits"
+            element={
+              <ProtectedRoute permission="deposits.view">
+                <AdminDeposits />
               </ProtectedRoute>
             }
           />
