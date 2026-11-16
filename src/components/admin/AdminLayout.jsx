@@ -12,6 +12,7 @@ import {
   FileText,
   FileSignature,
   Handshake,
+  LayoutDashboard,
   LayoutGrid,
   LogOut,
   MapPin,
@@ -25,6 +26,7 @@ import {
   X,
 } from 'lucide-react';
 import Logo from '../common/Logo';
+import NotificationBell from './NotificationBell';
 import { useAuth } from '../../hooks/useAuth';
 import { initialsOf } from '../../services/adminFormatters';
 
@@ -33,6 +35,12 @@ const NAV_GROUPS = [
     id: 'operations',
     label: 'Operations',
     items: [
+      {
+        to: '/admin/dashboard',
+        label: 'Dashboard',
+        icon: LayoutDashboard,
+        permission: 'dashboard.view',
+      },
       {
         to: '/admin/properties',
         label: 'Property studio',
@@ -276,6 +284,8 @@ export default function AdminLayout() {
               <ExternalLink size={16} aria-hidden="true" />
               <span>View website</span>
             </Link>
+
+            <NotificationBell />
 
             <div className="admin-user" ref={menuRef}>
               <button

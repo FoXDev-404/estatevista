@@ -31,6 +31,8 @@ import { createLeasesRouter } from './routes/leases.js';
 import { createRentRollRouter } from './routes/rentRoll.js';
 import { createRentCollectionsRouter } from './routes/rentCollections.js';
 import { createDepositsRouter } from './routes/deposits.js';
+import { createDashboardRouter } from './routes/dashboard.js';
+import { createNotificationsRouter } from './routes/notifications.js';
 import { createPropertiesRouter } from './routes/properties.js';
 import { createEnquiriesRouter } from './routes/enquiries.js';
 import { createUploadRouter } from './routes/upload.js';
@@ -86,6 +88,8 @@ export function createApp({ authRepository, adminRepository } = {}) {
   app.use('/api/rent-roll', createRentRollRouter({ auth, repository: admin }));
   app.use('/api/rent-collections', createRentCollectionsRouter({ auth, repository: admin }));
   app.use('/api/deposits', createDepositsRouter({ auth, repository: admin }));
+  app.use('/api/dashboard', createDashboardRouter({ auth, repository: admin }));
+  app.use('/api/notifications', createNotificationsRouter({ auth, repository: admin }));
   app.use('/api/properties', createPropertiesRouter({ auth }));
   app.use('/api/enquiries', createEnquiriesRouter({ auth }));
   app.use('/api/upload', createUploadRouter({ auth }));

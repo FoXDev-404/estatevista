@@ -9,6 +9,15 @@ export const UNIT_STATUSES = [
   'blocked',
   'under_maintenance',
 ];
+export const UNIT_STATUS_LABELS = {
+  draft: 'Draft',
+  available: 'Available',
+  reserved: 'Reserved',
+  sold: 'Sold',
+  rented: 'Rented',
+  blocked: 'Blocked',
+  under_maintenance: 'Under maintenance',
+};
 export const LAND_AREA_UNITS = ['katha', 'decimal', 'bigha', 'acre', 'sqft', 'sqm'];
 export const UNIT_AREA_UNITS = ['sqft', 'sqm', 'katha', 'acre'];
 

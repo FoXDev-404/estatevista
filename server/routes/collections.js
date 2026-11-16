@@ -5,6 +5,7 @@ import { nullableDate, nullableString, parseBody } from '../lib/validation.js';
 import { clientIp } from '../lib/scoping.js';
 import { paginated, parsePagination } from '../lib/pagination.js';
 import { loadCustomer, matchesSearch, todayIso } from './salesSupport.js';
+import { notifyCollectionReceived } from '../lib/notifications.js';
 
 const money = z.preprocess(
   (value) => (value === '' || value === undefined || value === null ? 0 : value),
@@ -146,7 +147,20 @@ export function createCollectionsRouter({ auth, repository }) {
         amount: receipt.amount,
         allocations: input.allocations.length,
       });
-      res.status(201).json({ data: await repository.getReceipt(companyId, receipt.id) });
+      const created = await repository.getReceipt(companyId, receipt.id);
+      const saleIds = [
+        ...new Set((created.allocations || []).map((row) => row.sale?.id).filter(Boolean)),
+      ];
+      for (const saleId of saleIds) {
+        const sale = await repository.getSale(companyId, saleId);
+        await notifyCollectionReceived(repository, {
+          companyId,
+          actorId: req.auth.user.id,
+          actorName: req.auth.user.name,
+          sale,
+        });
+      }
+      res.status(201).json({ data: created });
     }),
   );
 

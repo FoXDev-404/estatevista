@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { AlertCircle, LoaderCircle, Plus, Search, UserPlus, X } from 'lucide-react';
 import Container from '../../components/common/Container';
 import PageMeta from '../../components/common/PageMeta';
@@ -18,6 +19,7 @@ import { leadStageOptions } from '../../services/crmSelectors';
 export default function AdminLeads() {
   const { hasPermission, company } = useAuth();
   const { addToast } = useToast();
+  const [searchParams] = useSearchParams();
   const canCreate = hasPermission('leads.create');
   const canEdit = hasPermission('leads.edit');
   const canDelete = hasPermission('leads.delete');
@@ -27,7 +29,9 @@ export default function AdminLeads() {
   const [status, setStatus] = useState('loading');
   const [loadError, setLoadError] = useState('');
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('open');
+  const [statusFilter, setStatusFilter] = useState(
+    () => searchParams.get('status') || 'open',
+  );
   const [sourceFilter, setSourceFilter] = useState('');
   const [assigneeFilter, setAssigneeFilter] = useState('');
   const [page, setPage] = useState(1);

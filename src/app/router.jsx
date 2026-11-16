@@ -11,6 +11,7 @@ import Services from '../pages/Services';
 import Contact from '../pages/Contact';
 import NotFound from '../pages/NotFound';
 import AdminProperties from '../pages/admin/AdminProperties';
+import AdminDashboard from '../pages/admin/AdminDashboard';
 import AdminPropertyCreate from '../pages/admin/AdminPropertyCreate';
 import AdminPropertyEdit from '../pages/admin/AdminPropertyEdit';
 import AdminProjects from '../pages/admin/AdminProjects';
@@ -59,7 +60,15 @@ export default function AppRoutes() {
 
       <Route path="/admin" element={<ProtectedRoute />}>
         <Route element={<AdminLayout />}>
-          <Route index element={<Navigate to="properties" replace />} />
+          <Route index element={<Navigate to="dashboard" replace />} />
+          <Route
+            path="dashboard"
+            element={
+              <ProtectedRoute permission="dashboard.view">
+                <AdminDashboard />
+              </ProtectedRoute>
+            }
+          />
           <Route
             path="properties"
             element={

@@ -636,6 +636,7 @@ export class SupabaseAdminRepository {
         units_count: projectUnits.length,
         available_units: projectUnits.filter((unit) => unit.status === 'available').length,
         sold_units: projectUnits.filter((unit) => unit.status === 'sold').length,
+        rented_units: projectUnits.filter((unit) => unit.status === 'rented').length,
       };
     });
   }
@@ -973,6 +974,19 @@ export class SupabaseAdminRepository {
       .maybeSingle();
     if (error) fail('getUnit', error);
     return data || null;
+  }
+
+  async listUnitStatusCounts(companyId) {
+    const { data, error } = await this.client()
+      .from('units')
+      .select('status')
+      .eq('company_id', companyId)
+      .is('deleted_at', null);
+    if (error) fail('listUnitStatusCounts', error);
+    return (data || []).reduce((counts, row) => {
+      counts[row.status] = (counts[row.status] || 0) + 1;
+      return counts;
+    }, {});
   }
 
   async findUnitByNumber(companyId, projectId, unitNumber, excludeId = null) {
@@ -2549,6 +2563,90 @@ export class SupabaseAdminRepository {
       unit_types: unitTypesResult.data || [],
       sources: sourcesResult.data || [],
     };
+  }
+
+  async listNotifications(companyId, userId, { unreadOnly = false, limit = 20, offset = 0 } = {}) {
+    let query = this.client()
+      .from('notifications')
+      .select('*')
+      .eq('company_id', companyId)
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1);
+    if (unreadOnly) query = query.eq('is_read', false);
+    const { data, error } = await query;
+    if (error) fail('listNotifications', error);
+    return data || [];
+  }
+
+  async countUnreadNotifications(companyId, userId) {
+    const { count, error } = await this.client()
+      .from('notifications')
+      .select('id', { count: 'exact', head: true })
+      .eq('company_id', companyId)
+      .eq('user_id', userId)
+      .eq('is_read', false);
+    if (error) fail('countUnreadNotifications', error);
+    return count || 0;
+  }
+
+  async countNotifications(companyId, userId, { unreadOnly = false } = {}) {
+    let query = this.client()
+      .from('notifications')
+      .select('id', { count: 'exact', head: true })
+      .eq('company_id', companyId)
+      .eq('user_id', userId);
+    if (unreadOnly) query = query.eq('is_read', false);
+    const { count, error } = await query;
+    if (error) fail('countNotifications', error);
+    return count || 0;
+  }
+
+  async getNotification(companyId, userId, id) {
+    const { data, error } = await this.client()
+      .from('notifications')
+      .select('*')
+      .eq('company_id', companyId)
+      .eq('user_id', userId)
+      .eq('id', id)
+      .maybeSingle();
+    if (error) fail('getNotification', error);
+    return data || null;
+  }
+
+  async markNotificationRead(companyId, userId, id) {
+    const { data, error } = await this.client()
+      .from('notifications')
+      .update({ is_read: true, read_at: new Date().toISOString() })
+      .eq('company_id', companyId)
+      .eq('user_id', userId)
+      .eq('id', id)
+      .select('*')
+      .maybeSingle();
+    if (error) fail('markNotificationRead', error);
+    return data || null;
+  }
+
+  async markAllNotificationsRead(companyId, userId) {
+    const { data, error } = await this.client()
+      .from('notifications')
+      .update({ is_read: true, read_at: new Date().toISOString() })
+      .eq('company_id', companyId)
+      .eq('user_id', userId)
+      .eq('is_read', false)
+      .select('id');
+    if (error) fail('markAllNotificationsRead', error);
+    return (data || []).length;
+  }
+
+  async createNotification(companyId, payload) {
+    const { data, error } = await this.client()
+      .from('notifications')
+      .insert({ company_id: companyId, ...payload })
+      .select('*')
+      .single();
+    if (error) fail('createNotification', error);
+    return data;
   }
 
   async writeAudit(entry) {

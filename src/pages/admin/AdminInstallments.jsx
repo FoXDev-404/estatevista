@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import {
   AlertCircle,
   Ban,
@@ -29,6 +29,7 @@ import { formatDate, formatPrice } from '../../services/formatters';
 
 export default function AdminInstallments() {
   const { hasPermission, company } = useAuth();
+  const [searchParams] = useSearchParams();
   const canEdit = hasPermission('sales.edit');
   const currency = company?.currency || 'USD';
 
@@ -38,7 +39,7 @@ export default function AdminInstallments() {
   const [status, setStatus] = useState('loading');
   const [loadError, setLoadError] = useState('');
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState(() => searchParams.get('status') || '');
   const [projectFilter, setProjectFilter] = useState('');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');

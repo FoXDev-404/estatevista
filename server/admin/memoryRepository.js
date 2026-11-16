@@ -46,6 +46,7 @@ export class MemoryAdminRepository {
     rentAdjustments = [],
     securityDeposits = [],
     depositTransactions = [],
+    notifications = [],
     team = [],
     roles = [],
     rolePermissions = {},
@@ -80,6 +81,7 @@ export class MemoryAdminRepository {
     this.rentAdjustments = rentAdjustments.map((row) => ({ ...row }));
     this.securityDeposits = securityDeposits.map((row) => ({ ...row }));
     this.depositTransactions = depositTransactions.map((row) => ({ ...row }));
+    this.notifications = notifications.map((row) => ({ ...row }));
     this.unitStatusHistory = [];
     this.unitContracts = new Map();
     this.team = team.map((row) => ({ ...row, roles: [...(row.roles || [])] }));
@@ -165,6 +167,7 @@ export class MemoryAdminRepository {
       units_count: units.length,
       available_units: units.filter((unit) => unit.status === 'available').length,
       sold_units: units.filter((unit) => unit.status === 'sold').length,
+      rented_units: units.filter((unit) => unit.status === 'rented').length,
       branch: branch ? { id: branch.id, name: branch.name, code: branch.code } : null,
       project_manager: manager
         ? { id: manager.id, name: manager.name, email: manager.email }
@@ -419,6 +422,16 @@ export class MemoryAdminRepository {
       (row) => row.company_id === companyId && row.id === id && !row.deleted_at,
     );
     return unit ? this.unitSummary(unit) : null;
+  }
+
+  async listUnitStatusCounts(companyId) {
+    const counts = {};
+    this.units
+      .filter((row) => row.company_id === companyId && !row.deleted_at)
+      .forEach((row) => {
+        counts[row.status] = (counts[row.status] || 0) + 1;
+      });
+    return counts;
   }
 
   async findUnitByNumber(companyId, projectId, unitNumber, excludeId = null) {
@@ -2260,6 +2273,84 @@ export class MemoryAdminRepository {
         .map((row) => ({ id: row.id, name: row.name, sort_order: row.sort_order }))
         .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0) || a.name.localeCompare(b.name)),
     };
+  }
+
+  async listNotifications(companyId, userId, { unreadOnly = false, limit = 20, offset = 0 } = {}) {
+    let rows = this.notifications.filter(
+      (row) => row.company_id === companyId && row.user_id === userId,
+    );
+    if (unreadOnly) rows = rows.filter((row) => !row.is_read);
+    return rows
+      .slice()
+      .sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)))
+      .slice(offset, offset + limit)
+      .map((row) => ({ ...row }));
+  }
+
+  async countUnreadNotifications(companyId, userId) {
+    return this.notifications.filter(
+      (row) => row.company_id === companyId && row.user_id === userId && !row.is_read,
+    ).length;
+  }
+
+  async countNotifications(companyId, userId, { unreadOnly = false } = {}) {
+    return this.notifications.filter(
+      (row) =>
+        row.company_id === companyId &&
+        row.user_id === userId &&
+        (!unreadOnly || !row.is_read),
+    ).length;
+  }
+
+  async getNotification(companyId, userId, id) {
+    const row = this.notifications.find(
+      (notification) =>
+        notification.company_id === companyId &&
+        notification.user_id === userId &&
+        notification.id === id,
+    );
+    return row ? { ...row } : null;
+  }
+
+  async markNotificationRead(companyId, userId, id) {
+    const row = this.notifications.find(
+      (notification) =>
+        notification.company_id === companyId &&
+        notification.user_id === userId &&
+        notification.id === id,
+    );
+    if (!row) return null;
+    if (!row.is_read) {
+      row.is_read = true;
+      row.read_at = new Date().toISOString();
+    }
+    return { ...row };
+  }
+
+  async markAllNotificationsRead(companyId, userId) {
+    const now = new Date().toISOString();
+    let updated = 0;
+    this.notifications.forEach((row) => {
+      if (row.company_id === companyId && row.user_id === userId && !row.is_read) {
+        row.is_read = true;
+        row.read_at = now;
+        updated += 1;
+      }
+    });
+    return updated;
+  }
+
+  async createNotification(companyId, payload) {
+    const row = {
+      id: randomUUID(),
+      company_id: companyId,
+      is_read: false,
+      read_at: null,
+      created_at: new Date().toISOString(),
+      ...payload,
+    };
+    this.notifications.push(row);
+    return { ...row };
   }
 
   async writeAudit(entry) {

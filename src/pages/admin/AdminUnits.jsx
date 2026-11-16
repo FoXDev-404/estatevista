@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { AlertCircle, FileText, LoaderCircle, Plus, Search, X } from 'lucide-react';
 import Container from '../../components/common/Container';
 import PageMeta from '../../components/common/PageMeta';
@@ -18,6 +19,7 @@ import { unitStatusOptions } from '../../services/inventorySelectors';
 export default function AdminUnits() {
   const { hasPermission } = useAuth();
   const { addToast } = useToast();
+  const [searchParams] = useSearchParams();
   const canCreate = hasPermission('units.create');
   const canEdit = hasPermission('units.edit');
   const canDelete = hasPermission('units.delete');
@@ -31,7 +33,7 @@ export default function AdminUnits() {
   const [loadError, setLoadError] = useState('');
   const [search, setSearch] = useState('');
   const [projectFilter, setProjectFilter] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState(() => searchParams.get('status') || '');
   const [typeFilter, setTypeFilter] = useState('');
   const [page, setPage] = useState(1);
   const [reloadKey, setReloadKey] = useState(0);

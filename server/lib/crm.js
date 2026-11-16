@@ -7,6 +7,15 @@ export const LEAD_STATUSES = [
   'won',
   'lost',
 ];
+export const LEAD_STATUS_LABELS = {
+  new: 'New',
+  contacted: 'Contacted',
+  qualified: 'Qualified',
+  visit_scheduled: 'Visit scheduled',
+  negotiation: 'Negotiation',
+  won: 'Won',
+  lost: 'Lost',
+};
 export const LEAD_OPEN_STATUSES = LEAD_STATUSES.filter(
   (status) => status !== 'won' && status !== 'lost',
 );

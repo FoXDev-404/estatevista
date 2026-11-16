@@ -21,6 +21,7 @@ import {
   requireLead,
   resolveProjectUnit,
 } from './crmSupport.js';
+import { notifyLeadAssigned, notifyLeadStageChanged } from '../lib/notifications.js';
 
 const emptyToNull = (value) => (value === '' || value === undefined ? null : value);
 const nullableBudget = z.preprocess(
@@ -223,6 +224,12 @@ export function createLeadsRouter({ auth, repository }) {
         updated_by: req.auth.user.id,
       });
       await writeAudit(req, 'Lead', lead.id, 'created', null, pick(lead, LEAD_FIELDS));
+      await notifyLeadAssigned(repository, {
+        companyId,
+        actorId: req.auth.user.id,
+        actorName: req.auth.user.name,
+        lead,
+      });
       res.status(201).json({ data: lead });
     }),
   );
@@ -257,6 +264,22 @@ export function createLeadsRouter({ auth, repository }) {
         pick(before, LEAD_FIELDS),
         pick(lead, LEAD_FIELDS),
       );
+      if (lead.assigned_to && lead.assigned_to !== before.assigned_to) {
+        await notifyLeadAssigned(repository, {
+          companyId,
+          actorId: req.auth.user.id,
+          actorName: req.auth.user.name,
+          lead,
+        });
+      }
+      if (lead.status !== before.status) {
+        await notifyLeadStageChanged(repository, {
+          companyId,
+          actorId: req.auth.user.id,
+          actorName: req.auth.user.name,
+          lead,
+        });
+      }
       res.json({ data: lead });
     }),
   );
@@ -276,6 +299,14 @@ export function createLeadsRouter({ auth, repository }) {
         updated_by: req.auth.user.id,
       });
       await writeAudit(req, 'Lead', lead.id, 'status_changed', before.status, lead.status);
+      if (lead.status !== before.status) {
+        await notifyLeadStageChanged(repository, {
+          companyId,
+          actorId: req.auth.user.id,
+          actorName: req.auth.user.name,
+          lead,
+        });
+      }
       res.json({ data: lead });
     }),
   );

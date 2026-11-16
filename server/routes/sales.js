@@ -19,6 +19,7 @@ import {
   saleOpenBalance,
   todayIso,
 } from './salesSupport.js';
+import { notifySaleCreated } from '../lib/notifications.js';
 
 const money = z.preprocess(
   (value) => (value === '' || value === undefined || value === null ? 0 : value),
@@ -309,7 +310,14 @@ export function createSalesRouter({ auth, repository }) {
         net_price: sale.net_price,
         payment_type: sale.payment_type,
       });
-      res.status(201).json({ data: await repository.getSale(companyId, sale.id) });
+      const createdSale = await repository.getSale(companyId, sale.id);
+      await notifySaleCreated(repository, {
+        companyId,
+        actorId: req.auth.user.id,
+        actorName: req.auth.user.name,
+        sale: createdSale,
+      });
+      res.status(201).json({ data: createdSale });
     }),
   );
 
