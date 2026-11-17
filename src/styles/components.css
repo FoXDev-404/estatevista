@@ -733,7 +733,7 @@
 
 .form-field input::placeholder,
 .form-field textarea::placeholder {
-  color: #a29f96;
+  color: var(--color-muted);
 }
 
 .form-field input:hover,

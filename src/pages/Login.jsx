@@ -1,9 +1,22 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowRight, Eye, EyeOff, LockKeyhole } from 'lucide-react';
 import Logo from '../components/common/Logo';
 import PageMeta from '../components/common/PageMeta';
 import { useAuth } from '../hooks/useAuth';
+
+const DEMO_ACCOUNTS = [
+  {
+    role: 'Company admin',
+    email: 'jordan@meridian-estates.test',
+    password: 'MeridianDesk2026',
+  },
+  {
+    role: 'Sales agent',
+    email: 'casey@meridian-estates.test',
+    password: 'SalesAgent2026',
+  },
+];
 
 function safeNext(value) {
   if (!value || !value.startsWith('/') || value.startsWith('//')) return '/admin';
@@ -21,6 +34,7 @@ export default function Login() {
   const [fieldErrors, setFieldErrors] = useState({});
   const [formError, setFormError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const emailInputRef = useRef(null);
 
   if (status === 'authenticated') {
     return <Navigate to={next} replace />;
@@ -29,6 +43,13 @@ export default function Login() {
   const updateField = (field) => (event) => {
     setForm((current) => ({ ...current, [field]: event.target.value }));
   };
+
+  function applyDemoAccount(account) {
+    setForm((current) => ({ ...current, email: account.email, password: account.password }));
+    setFormError('');
+    setFieldErrors({});
+    emailInputRef.current?.focus();
+  }
 
   async function handleSubmit(event) {
     event.preventDefault();
@@ -53,7 +74,7 @@ export default function Login() {
 
       <section className="auth-page__panel" aria-label="EstateVista workspace">
         <div className="auth-page__brand">
-          <Logo />
+          <Logo variant="light" />
         </div>
 
         <div className="auth-page__intro">
@@ -100,6 +121,7 @@ export default function Login() {
               placeholder="you@company.com"
               value={form.email}
               onChange={updateField('email')}
+              ref={emailInputRef}
               aria-invalid={Boolean(fieldErrors.email)}
               aria-describedby={fieldErrors.email ? 'login-email-error' : undefined}
               required
@@ -153,6 +175,37 @@ export default function Login() {
             {submitting ? 'Signing in…' : 'Sign in'}
             {submitting ? null : <ArrowRight size={17} aria-hidden="true" />}
           </button>
+
+          <div className="auth-demo" role="group" aria-label="Demo accounts">
+            <p className="auth-demo__label">Demo access</p>
+            <ul className="auth-demo__list">
+              {DEMO_ACCOUNTS.map((account) => (
+                <li className="auth-demo__item" key={account.email}>
+                  <span className="auth-demo__role">{account.role}</span>
+                  <span className="auth-demo__credentials">
+                    <span>
+                      <span className="sr-only">Email: </span>
+                      {account.email}
+                    </span>
+                    <span>
+                      <span className="sr-only">Password: </span>
+                      {account.password}
+                    </span>
+                  </span>
+                  <button
+                    type="button"
+                    className="auth-demo__use"
+                    onClick={() => applyDemoAccount(account)}
+                    aria-label={`Use ${account.role.toLowerCase()} demo account`}
+                    disabled={submitting}
+                  >
+                    Use
+                  </button>
+                </li>
+              ))}
+            </ul>
+            <p className="auth-demo__note">Demo workspace only — never use these accounts for real client data.</p>
+          </div>
 
           <p className="auth-form__hint">
             <LockKeyhole size={14} aria-hidden="true" />
