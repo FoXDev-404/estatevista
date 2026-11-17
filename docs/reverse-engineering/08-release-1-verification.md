@@ -340,7 +340,32 @@ Minor findings N3 (expiry route coverage, ambiguous shared-email branch) and N4 
 
 Review-fix verification on `fix/review-2-hardening`: `npm run lint` clean; `npm test -- --run` 108 tests / 18 files; `npm run test:server` 175 tests / 18 files.
 
+## N. Production deployment verification
 
+The first production deployment on Vercel (`dpl_85QUaaF6aMpHNgW2cWkxT3oFEEMG`, commit `7fc4e8e`) returned `500 FUNCTION_INVOCATION_FAILED` for every `/api/*` request, including `POST /api/auth/login`; the login page surfaced the failure as `[object Object]`. Runtime logs showed the function crashing at import:
+
+```
+Error: SESSION_SECRET must be set in production.
+    at assertProductionConfig (file:///var/task/server/lib/config.js:59:11)
+    at file:///var/task/server/index.js:5:1
+```
+
+Root cause: the Vercel Production environment had the Supabase and Postgres variables but not `SESSION_SECRET` or `PUBLIC_COMPANY_SLUG`. This was a deployment configuration gap, not a code regression.
+
+Fix: added `SESSION_SECRET` (96-character random value, encrypted) and `PUBLIC_COMPANY_SLUG=meridian-estates` to the Production environment, then redeployed commit `7fc4e8e` as `dpl_CdaJLdG1RvpjpXCqiTQo385oW4cN`.
+
+Verified against `https://estatevista-rust.vercel.app`:
+
+| Check | Result |
+|---|---|
+| `GET /api/health` | 200 |
+| `POST /api/auth/login` (`jordan@meridian-estates.test`) | 200 with `ev_session` and `ev_csrf` cookies |
+| `GET /api/auth/me` | 200, Meridian Estates, permissions `*` |
+| `GET /api/dashboard` | 200, 4 KPIs and all five permitted sections |
+| `POST /api/public/inquiries` | 201 `{success:true,duplicate:false}`; replay 200 `{success:true,duplicate:true}` (test rows deleted afterward) |
+| `/admin/dashboard` in a browser | Login submitted, redirected to the dashboard, KPIs rendered, no console errors after sign-in |
+
+Vercel production environment requirements are documented in `README.md` and `.env.example`. Changing a variable does not patch a running deployment; it must be redeployed.
 
 - [x] Phase 1 flows inventoried and mapped to a section above.
 - [x] Every R1 work package has automated tests and a recorded manual cycle.
@@ -350,8 +375,9 @@ Review-fix verification on `fix/review-2-hardening`: `npm run lint` clean; `npm 
 - [x] Branch-level code review completed (independent reviewer; findings triaged above).
 - [x] Second independent review of the merged state completed; no Critical findings, both Important findings fixed and covered by regression tests.
 - [x] Merge/keep-branch decision recorded by the human partner: merge locally into `main` (merge commit `1559b29`), then delete `feat/r1-core-ops`. Post-merge verification: lint clean, client 108 tests / 18 files, server 164 tests / 17 files. Review-round-2 fixes merged as `7dc6e89`, branch deleted; post-merge verification: lint clean, client 108 tests / 18 files, server 175 tests / 18 files.
+- [x] Production deployment verified end to end on Vercel after adding the missing `SESSION_SECRET` and `PUBLIC_COMPANY_SLUG` variables (section N).
 
-## N. Document coverage index
+## O. Document coverage index
 
 | Phase 1 document | Covered in |
 |---|---|

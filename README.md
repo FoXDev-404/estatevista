@@ -54,9 +54,24 @@ PORT=5000
 SUPABASE_URL=https://your-project.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=your-supabase-service-role-key
 SUPABASE_ANON_KEY=your-supabase-anon-key
+SESSION_SECRET=replace-with-a-long-random-string
+PUBLIC_COMPANY_SLUG=your-company
 # Express trust proxy: defaults to 1 on Vercel, false elsewhere.
 # TRUST_PROXY=1
 ```
+
+### Vercel Deployment
+Set these variables for the **Production** environment in the Vercel project before deploying:
+
+| Variable | Required | Purpose |
+| :--- | :--- | :--- |
+| `SUPABASE_URL` | Yes | Supabase project URL |
+| `SUPABASE_SERVICE_ROLE_KEY` | Yes | Server-side database and storage access |
+| `SESSION_SECRET` | Yes | Signs session cookies; a long random value per environment |
+| `PUBLIC_COMPANY_SLUG` | Yes | Company that receives public website inquiries (Release 1 is single-tenant) |
+| `TRUST_PROXY` | No | Overrides the default of one trusted proxy hop on Vercel; leave unset on Vercel |
+
+The API validates this configuration at import time. If `SESSION_SECRET` is missing in production, every `/api/*` request fails with `500 FUNCTION_INVOCATION_FAILED` and the runtime log reports `SESSION_SECRET must be set in production.` Add or rotate a variable, then redeploy — the running deployment keeps the environment it was built with.
 
 ### Available Scripts
 
