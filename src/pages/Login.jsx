@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowRight, Eye, EyeOff, LockKeyhole } from 'lucide-react';
 import Logo from '../components/common/Logo';
@@ -34,6 +34,7 @@ export default function Login() {
   const [fieldErrors, setFieldErrors] = useState({});
   const [formError, setFormError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const emailInputRef = useRef(null);
 
   if (status === 'authenticated') {
     return <Navigate to={next} replace />;
@@ -44,9 +45,10 @@ export default function Login() {
   };
 
   function applyDemoAccount(account) {
-    setForm({ email: account.email, password: account.password });
+    setForm((current) => ({ ...current, email: account.email, password: account.password }));
     setFormError('');
     setFieldErrors({});
+    emailInputRef.current?.focus();
   }
 
   async function handleSubmit(event) {
@@ -119,6 +121,7 @@ export default function Login() {
               placeholder="you@company.com"
               value={form.email}
               onChange={updateField('email')}
+              ref={emailInputRef}
               aria-invalid={Boolean(fieldErrors.email)}
               aria-describedby={fieldErrors.email ? 'login-email-error' : undefined}
               required
@@ -180,14 +183,21 @@ export default function Login() {
                 <li className="auth-demo__item" key={account.email}>
                   <span className="auth-demo__role">{account.role}</span>
                   <span className="auth-demo__credentials">
-                    <span>{account.email}</span>
-                    <span>{account.password}</span>
+                    <span>
+                      <span className="sr-only">Email: </span>
+                      {account.email}
+                    </span>
+                    <span>
+                      <span className="sr-only">Password: </span>
+                      {account.password}
+                    </span>
                   </span>
                   <button
                     type="button"
                     className="auth-demo__use"
                     onClick={() => applyDemoAccount(account)}
                     aria-label={`Use ${account.role.toLowerCase()} demo account`}
+                    disabled={submitting}
                   >
                     Use
                   </button>
