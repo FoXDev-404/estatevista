@@ -5,6 +5,19 @@ import Logo from '../components/common/Logo';
 import PageMeta from '../components/common/PageMeta';
 import { useAuth } from '../hooks/useAuth';
 
+const DEMO_ACCOUNTS = [
+  {
+    role: 'Company admin',
+    email: 'jordan@meridian-estates.test',
+    password: 'MeridianDesk2026',
+  },
+  {
+    role: 'Sales agent',
+    email: 'casey@meridian-estates.test',
+    password: 'SalesAgent2026',
+  },
+];
+
 function safeNext(value) {
   if (!value || !value.startsWith('/') || value.startsWith('//')) return '/admin';
   return value;
@@ -30,6 +43,12 @@ export default function Login() {
     setForm((current) => ({ ...current, [field]: event.target.value }));
   };
 
+  function applyDemoAccount(account) {
+    setForm({ email: account.email, password: account.password });
+    setFormError('');
+    setFieldErrors({});
+  }
+
   async function handleSubmit(event) {
     event.preventDefault();
     setSubmitting(true);
@@ -53,7 +72,7 @@ export default function Login() {
 
       <section className="auth-page__panel" aria-label="EstateVista workspace">
         <div className="auth-page__brand">
-          <Logo />
+          <Logo variant="light" />
         </div>
 
         <div className="auth-page__intro">
@@ -153,6 +172,30 @@ export default function Login() {
             {submitting ? 'Signing in…' : 'Sign in'}
             {submitting ? null : <ArrowRight size={17} aria-hidden="true" />}
           </button>
+
+          <div className="auth-demo" role="group" aria-label="Demo accounts">
+            <p className="auth-demo__label">Demo access</p>
+            <ul className="auth-demo__list">
+              {DEMO_ACCOUNTS.map((account) => (
+                <li className="auth-demo__item" key={account.email}>
+                  <span className="auth-demo__role">{account.role}</span>
+                  <span className="auth-demo__credentials">
+                    <span>{account.email}</span>
+                    <span>{account.password}</span>
+                  </span>
+                  <button
+                    type="button"
+                    className="auth-demo__use"
+                    onClick={() => applyDemoAccount(account)}
+                    aria-label={`Use ${account.role.toLowerCase()} demo account`}
+                  >
+                    Use
+                  </button>
+                </li>
+              ))}
+            </ul>
+            <p className="auth-demo__note">Demo workspace only — never use these accounts for real client data.</p>
+          </div>
 
           <p className="auth-form__hint">
             <LockKeyhole size={14} aria-hidden="true" />

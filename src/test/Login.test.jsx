@@ -49,6 +49,23 @@ describe('Login page', () => {
     expect(login).toHaveBeenCalledWith({ email: 'avery@example.com', password: 'wrong-password' });
   });
 
+  it('offers demo credentials that fill the sign-in form', async () => {
+    const user = userEvent.setup();
+    const login = vi.fn().mockResolvedValue({ user: { id: 'user-1' } });
+
+    renderLogin({ login });
+
+    expect(screen.getByText('jordan@meridian-estates.test')).toBeInTheDocument();
+    expect(screen.getByText('MeridianDesk2026')).toBeInTheDocument();
+    expect(screen.getByText('casey@meridian-estates.test')).toBeInTheDocument();
+    expect(screen.getByText('SalesAgent2026')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Use company admin demo account' }));
+
+    expect(screen.getByLabelText('Work email')).toHaveValue('jordan@meridian-estates.test');
+    expect(screen.getByLabelText('Password')).toHaveValue('MeridianDesk2026');
+  });
+
   it('signs in and continues to the requested page', async () => {
     const user = userEvent.setup();
     const login = vi.fn().mockResolvedValue({ user: { id: 'user-1' } });
