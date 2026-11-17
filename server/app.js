@@ -55,6 +55,7 @@ export function createApp({
 
   const app = express();
   app.disable('x-powered-by');
+  app.set('trust proxy', config.trustProxy);
   app.locals.authService = authService;
   app.locals.authMiddleware = auth;
 

@@ -300,7 +300,7 @@ Document sources: `04-api-contract.md`, `05-data-model.md`.
 11. The website inquiry inbox is read-only.
 12. Demo-only behaviour (blocked deletes, getting-started modal, net-profit KPI, chart) was not copied.
 13. Company timezone and date format are stored but not applied to calculations or display; date-only strings parse as UTC. Treat them as display-only in R1.
-14. The public inquiry throttle is an in-process fixed window (10 new submissions per IP per 10 minutes). It resets on restart and is not shared across instances.
+14. The public inquiry throttle is an in-process fixed window (10 new submissions per IP per 10 minutes). It resets on restart and is not shared across instances. Client IPs come from Express `req.ip` using the `trust proxy` setting: one trusted hop on Vercel, none by default elsewhere, configurable through `TRUST_PROXY`. Only enable proxy trust behind an edge that overwrites or appends `X-Forwarded-For`.
 15. Money-critical SQL (receipt post/void, rent post/void, deposit actions) is exercised through the in-memory repository in CI; a disposable-Postgres integration tier is still required before production.
 
 ## M. Review outcomes and sign-off checklist
@@ -329,6 +329,17 @@ Independent review of `0b5f06b..167b55b` returned "Ready to merge? With fixes" (
 
 Post-fix verification: `npm run lint` clean; `npm test -- --run` 108 tests / 18 files; `npm run test:server` 164 tests / 17 files.
 
+A second independent review of the final merged state `0b5f06b..2a6c0a0` returned "With fixes" with no Critical findings. Its two Important findings were fixed:
+
+| Finding | Outcome |
+|---|---|
+| N1 client IP trust and unbounded limiter map | Fixed: `clientIp()` now uses only Express `req.ip`; `trust proxy` defaults to one hop on Vercel and none elsewhere, configurable via `TRUST_PROXY`; limiter buckets are capped and swept at most once per window; forged `X-Forwarded-For` regression test added |
+| N2 M5 concurrency test did not reach the claim-failure path | Fixed: `attachLead` is exported and a deterministic false-claim test asserts the losing lead is deleted; the concurrent test now counts visible (non-deleted) leads |
+
+Minor findings N3 (expiry route coverage, ambiguous shared-email branch) and N4 (silent lead-attachment failures) were also addressed: rent-roll and dashboard expiry tests, an ambiguous shared-email login test, and inquiry-id logging on capture failure were added.
+
+Review-fix verification on `fix/review-2-hardening`: `npm run lint` clean; `npm test -- --run` 108 tests / 18 files; `npm run test:server` 175 tests / 18 files.
+
 
 
 - [x] Phase 1 flows inventoried and mapped to a section above.
@@ -337,7 +348,8 @@ Post-fix verification: `npm run lint` clean; `npm test -- --run` 108 tests / 18 
 - [x] Known limitations are recorded rather than hidden.
 - [x] Final sequential commands pass: lint, client tests, server tests.
 - [x] Branch-level code review completed (independent reviewer; findings triaged above).
-- [x] Merge/keep-branch decision recorded by the human partner: merge locally into `main` (merge commit `1559b29`), then delete `feat/r1-core-ops`. Post-merge verification: lint clean, client 108 tests / 18 files, server 164 tests / 17 files.
+- [x] Second independent review of the merged state completed; no Critical findings, both Important findings fixed and covered by regression tests.
+- [x] Merge/keep-branch decision recorded by the human partner: merge locally into `main` (merge commit `1559b29`), then delete `feat/r1-core-ops`. Post-merge verification: lint clean, client 108 tests / 18 files, server 164 tests / 17 files. Post-review-round-2 verification on the fix branch: lint clean, client 108 tests / 18 files, server 175 tests / 18 files.
 
 ## N. Document coverage index
 

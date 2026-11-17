@@ -803,6 +803,22 @@ describe('rental routes', () => {
   });
 
   describe('rent roll', () => {
+    it('expires a finished lease while reading the rent roll', async () => {
+      const { agent, csrf } = await loginAdmin(app);
+      const created = await createLease(agent, csrf, {
+        start_date: '2026-06-01',
+        end_date: '2026-10-31',
+      }).expect(201);
+      await activateLease(agent, csrf, created.body.data.id).expect(200);
+
+      await agent.get('/api/rent-roll').expect(200);
+
+      expect(
+        adminRepository.leases.find((row) => row.id === created.body.data.id).status,
+      ).toBe('expired');
+      expect(adminRepository.units.find((row) => row.id === UNIT_ONE_ID).status).toBe('available');
+    });
+
     it('filters open, overdue and date-ranged rent periods', async () => {
       const { agent, csrf } = await loginAdmin(app);
       const created = await createLease(agent, csrf).expect(201);

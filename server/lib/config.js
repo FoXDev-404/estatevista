@@ -12,11 +12,28 @@ function splitOrigins(value) {
     .filter(Boolean);
 }
 
+function trustProxySetting() {
+  const raw = process.env.TRUST_PROXY;
+  if (raw === undefined || raw.trim() === '') {
+    // Vercel overwrites X-Forwarded-For at its edge; trust exactly that hop.
+    // Everywhere else, trust no proxy by default so a direct client cannot
+    // spoof its address through the header.
+    return process.env.VERCEL ? 1 : false;
+  }
+
+  const value = raw.trim();
+  if (value === 'true') return true;
+  if (value === 'false') return false;
+  if (/^\d+$/.test(value)) return Number(value);
+  return value;
+}
+
 export const config = {
   nodeEnv,
   isProduction,
   port: Number(process.env.PORT || 5000),
   appOrigins: splitOrigins(process.env.APP_ORIGIN),
+  trustProxy: trustProxySetting(),
   sessionSecret:
     process.env.SESSION_SECRET ||
     (isProduction ? '' : 'estatevista-dev-session-secret-change-me'),

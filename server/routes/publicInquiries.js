@@ -59,7 +59,7 @@ function leadNotes(inquiry, property) {
  * Creates the Website lead that backs an inquiry. Safe to call twice: an
  * inquiry that already carries a lead is returned unchanged.
  */
-async function attachLead(repository, companyId, inquiry) {
+export async function attachLead(repository, companyId, inquiry) {
   if (inquiry.lead_id) return inquiry;
 
   const [source, property] = await Promise.all([
@@ -100,9 +100,14 @@ async function attachLead(repository, companyId, inquiry) {
 async function finishCapture(repository, companyId, inquiry) {
   try {
     await attachLead(repository, companyId, inquiry);
-  } catch {
+  } catch (error) {
     // The inquiry is captured; a retry with the same submission key heals the
-    // missing lead without creating a second inquiry.
+    // missing lead without creating a second inquiry. Log identifiers only —
+    // never the visitor's contact details.
+    console.error(
+      `[public-inquiries] Could not attach a lead to inquiry ${inquiry.id}:`,
+      error?.message || error,
+    );
   }
 }
 
