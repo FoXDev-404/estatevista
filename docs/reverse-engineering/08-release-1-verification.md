@@ -349,7 +349,7 @@ Review-fix verification on `fix/review-2-hardening`: `npm run lint` clean; `npm 
 - [x] Final sequential commands pass: lint, client tests, server tests.
 - [x] Branch-level code review completed (independent reviewer; findings triaged above).
 - [x] Second independent review of the merged state completed; no Critical findings, both Important findings fixed and covered by regression tests.
-- [x] Merge/keep-branch decision recorded by the human partner: merge locally into `main` (merge commit `1559b29`), then delete `feat/r1-core-ops`. Post-merge verification: lint clean, client 108 tests / 18 files, server 164 tests / 17 files. Post-review-round-2 verification on the fix branch: lint clean, client 108 tests / 18 files, server 175 tests / 18 files.
+- [x] Merge/keep-branch decision recorded by the human partner: merge locally into `main` (merge commit `1559b29`), then delete `feat/r1-core-ops`. Post-merge verification: lint clean, client 108 tests / 18 files, server 164 tests / 17 files. Review-round-2 fixes merged as `7dc6e89`, branch deleted; post-merge verification: lint clean, client 108 tests / 18 files, server 175 tests / 18 files.
 
 ## N. Document coverage index
 
