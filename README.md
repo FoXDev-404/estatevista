@@ -109,7 +109,7 @@ EstateVista runs as an Express API locally and as a unified Vercel Serverless Fu
 ## 🧪 Testing & Verification
 
 The project includes thorough unit, component, and integration tests:
-- **108 client tests** across 18 files and **175 server tests** across 18 files passing.
+- **110 client tests** across 18 files and **175 server tests** across 18 files passing.
 - **Zero ESLint warnings or errors**.
 - Automated live database verification script (`npm run test:crud`).
 

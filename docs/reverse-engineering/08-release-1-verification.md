@@ -340,6 +340,20 @@ Minor findings N3 (expiry route coverage, ambiguous shared-email branch) and N4 
 
 Review-fix verification on `fix/review-2-hardening`: `npm run lint` clean; `npm test -- --run` 108 tests / 18 files; `npm run test:server` 175 tests / 18 files.
 
+A third independent review covered the sign-in visibility and demo-access change on `fix/login-visibility-demo-access` (base `4f81446`, head `e26b7cf`) and returned "With fixes" with no Critical findings. Its one Important finding and the actionable minors were fixed in `e26b7cf`:
+
+| Finding | Outcome |
+|---|---|
+| Important: Use button hover/focus label failed AA (4.14:1 on gold-pale) | Fixed: hover/focus text is now `--color-ink` (12.58:1); the resting border uses `--color-gold-deep` |
+| Silent credential fill with no focus feedback | Fixed: the email input receives focus after a demo account is applied |
+| Unlabelled email/password values | Fixed with `sr-only` "Email:" / "Password:" labels |
+| Missing regression coverage for non-submit and stale-error clearing | Fixed: tests assert the form is not submitted, errors are cleared, focus moves to the email input, and the sales-agent demo fills |
+| Credential map and placeholder hex literals | Fixed: `setForm` merges state like `updateField`; the demo buttons disable while submitting; placeholders use `var(--color-muted)`; monospace stack moved to `--font-mono` |
+
+The demo credentials remain intentionally visible on the sign-in page because the human partner requested them for the demo workspace. They ship in the client bundle; the demo database must never hold real client data. Verified sign-in contrast: dark-panel headline 15.77:1, description 10.46:1, footnote 5.80:1, light-panel eyebrow 4.83:1.
+
+Sign-in change verification on `main` after the merge: `npm run lint` clean; `npm test -- --run` 110 tests / 18 files; `npm run test:server` 175 tests / 18 files; `npm run build` succeeds.
+
 ## N. Production deployment verification
 
 The first production deployment on Vercel (`dpl_85QUaaF6aMpHNgW2cWkxT3oFEEMG`, commit `7fc4e8e`) returned `500 FUNCTION_INVOCATION_FAILED` for every `/api/*` request, including `POST /api/auth/login`; the login page surfaced the failure as `[object Object]`. Runtime logs showed the function crashing at import:
@@ -366,6 +380,8 @@ Verified against `https://estatevista-rust.vercel.app`:
 | `/admin/dashboard` in a browser | Login submitted, redirected to the dashboard, KPIs rendered, no console errors after sign-in |
 
 Vercel production environment requirements are documented in `README.md` and `.env.example`. Changing a variable does not patch a running deployment; it must be redeployed.
+
+The sign-in redesign merged as `30b333f` deployed as `dpl_ENTg6rvaTHeUuTzPjXXHw7AGnQcP` and was verified on the same production alias: the light logo, ivory headline, stronger description and footnote opacity and dark-gold eyebrow render (computed colours match the reviewed values), the Demo access block lists both accounts below the Sign in button, its Use control fills the email and password fields and moves focus to the email input, and submitting the filled admin credentials reaches `/admin/dashboard` with the KPI cards.
 
 - [x] Phase 1 flows inventoried and mapped to a section above.
 - [x] Every R1 work package has automated tests and a recorded manual cycle.
