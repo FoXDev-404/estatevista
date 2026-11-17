@@ -12,9 +12,10 @@ export function companyFilter(query, companyId) {
 }
 
 export function clientIp(req) {
-  const forwarded = req.headers?.['x-forwarded-for'];
-  if (typeof forwarded === 'string' && forwarded.length) {
-    return forwarded.split(',')[0].trim();
-  }
-  return req.ip || req.socket?.remoteAddress || null;
+  // Express resolves req.ip according to the configured `trust proxy` setting.
+  // Never read X-Forwarded-For directly here: without a trusted edge that
+  // header is client-controlled and would let callers spoof audit IPs and
+  // bypass IP-keyed throttles.
+  const ip = req.ip || req.socket?.remoteAddress || null;
+  return ip ? String(ip).replace(/^::ffff:/, '') : null;
 }

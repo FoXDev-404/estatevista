@@ -1,5 +1,21 @@
 import { describe, expect, it } from 'vitest';
-import { assertSameCompany } from '../lib/scoping.js';
+import { assertSameCompany, clientIp } from '../lib/scoping.js';
+
+describe('client IP', () => {
+  it('uses the Express-resolved address rather than a client-supplied header', () => {
+    expect(
+      clientIp({
+        headers: { 'x-forwarded-for': '203.0.113.9' },
+        ip: '10.0.0.5',
+        socket: { remoteAddress: '10.0.0.5' },
+      }),
+    ).toBe('10.0.0.5');
+  });
+
+  it('falls back to the peer address when Express has not resolved one', () => {
+    expect(clientIp({ headers: {}, socket: { remoteAddress: '10.0.0.6' } })).toBe('10.0.0.6');
+  });
+});
 
 describe('company scoping', () => {
   it('returns a row that belongs to the company', () => {

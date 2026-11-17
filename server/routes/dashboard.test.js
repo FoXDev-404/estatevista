@@ -748,9 +748,10 @@ async function login(app, email, password) {
 
 describe('dashboard routes', () => {
   let app;
+  let adminRepository;
 
   beforeEach(async () => {
-    ({ app } = await makeApp());
+    ({ app, adminRepository } = await makeApp());
   });
 
   it('requires a session', async () => {
@@ -826,6 +827,19 @@ describe('dashboard routes', () => {
     expect(pipeline.won).toBe(1);
     expect(pipeline.lost).toBe(0);
     expect(data.lead_pipeline.reduce((sum, row) => sum + row.count, 0)).toBe(4);
+  });
+
+  it('expires a finished lease before building the dashboard', async () => {
+    const lease = adminRepository.leases.find((row) => row.id === LEASE_ID);
+    lease.end_date = dateOffset(-1);
+    const unit = adminRepository.units.find((row) => row.id === UNIT_FOUR_ID);
+    unit.status = 'rented';
+
+    const { agent } = await login(app, 'jordan@meridian-estates.test', 'AdminPass123');
+    await agent.get('/api/dashboard').expect(200);
+
+    expect(lease.status).toBe('expired');
+    expect(unit.status).toBe('available');
   });
 
   it('omits sections the signed-in user cannot see', async () => {

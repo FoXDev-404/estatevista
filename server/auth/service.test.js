@@ -137,6 +137,54 @@ describe('AuthService', () => {
     expect(secondLogin.company.id).toBe(secondCompany.id);
   });
 
+  it('rejects a shared email when two accounts accept the same password', async () => {
+    const secondCompany = {
+      ...company,
+      id: 'company-2',
+      name: 'Second Company',
+      slug: 'second-company',
+    };
+    const passwordHash = await hashPassword('SharedPass123');
+    const first = {
+      id: 'user-1',
+      company_id: company.id,
+      name: 'First User',
+      email: 'shared@example.com',
+      password_hash: passwordHash,
+      full_access: false,
+      is_active: true,
+    };
+    const second = {
+      id: 'user-2',
+      company_id: secondCompany.id,
+      name: 'Second User',
+      email: 'shared@example.com',
+      password_hash: passwordHash,
+      full_access: false,
+      is_active: true,
+    };
+    const { repo } = await makeRepo({
+      companies: [company, secondCompany],
+      users: [first, second],
+      userRoles: [],
+      rolePermissions: [],
+    });
+    const service = makeService(repo, nowRef);
+
+    await expect(
+      service.login({
+        email: 'shared@example.com',
+        password: 'SharedPass123',
+        ip: '203.0.113.10',
+      }),
+    ).rejects.toMatchObject({ status: 401, message: 'Invalid email or password.' });
+
+    expect(repo.sessions).toHaveLength(0);
+    expect(repo.loginAttempts).toEqual([
+      expect.objectContaining({ email: 'shared@example.com', successful: false }),
+    ]);
+  });
+
   it('rejects a wrong password and records a failed attempt', async () => {
     const { repo } = await makeRepo();
     const service = makeService(repo, nowRef);

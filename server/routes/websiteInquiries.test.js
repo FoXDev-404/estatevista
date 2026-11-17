@@ -1,10 +1,11 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import request from 'supertest';
 import { createApp } from '../app.js';
 import { MemoryAuthRepository } from '../auth/memoryRepository.js';
 import { MemoryAdminRepository } from '../admin/memoryRepository.js';
 import { SupabaseAdminRepository } from '../admin/repository.js';
 import { hashPassword } from '../auth/password.js';
+import { attachLead } from './publicInquiries.js';
 
 const COMPANY_ID = '11111111-1111-4111-8111-111111111111';
 const OTHER_COMPANY_ID = '11111111-2222-4222-8222-111111111111';
@@ -448,6 +449,43 @@ async function login(app, email, password) {
 const loginManager = (app) => login(app, 'sam@meridian-estates.test', 'ManagerPass123');
 const loginAgent = (app) => login(app, 'casey@meridian-estates.test', 'AgentPass123');
 
+describe('attachLead', () => {
+  it('deletes its own lead when another request already claimed the inquiry', async () => {
+    const inquiry = {
+      id: 'inquiry-race-1',
+      company_id: COMPANY_ID,
+      lead_id: null,
+      project_id: null,
+      unit_id: null,
+      property_id: null,
+      name: 'Priya Nair',
+      phone: '+1 555 0142',
+      email: 'priya@example.test',
+      message: 'I would like to arrange a viewing.',
+      source_page: '/properties/marina-loft',
+    };
+    const calls = [];
+    const repository = {
+      findSourceByName: async () => ({ id: SOURCE_WEBSITE_ID }),
+      createLead: async (_companyId, input) => {
+        calls.push(['createLead', input.status]);
+        return { id: 'lead-loser' };
+      },
+      claimWebsiteInquiryLead: async () => false,
+      deleteLead: async (companyId, leadId) => {
+        calls.push(['deleteLead', companyId, leadId]);
+      },
+      getWebsiteInquiry: async () => ({ ...inquiry, lead_id: 'lead-winner' }),
+    };
+
+    const result = await attachLead(repository, COMPANY_ID, inquiry);
+
+    expect(calls).toContainEqual(['createLead', 'new']);
+    expect(calls).toContainEqual(['deleteLead', COMPANY_ID, 'lead-loser']);
+    expect(result.lead_id).toBe('lead-winner');
+  });
+});
+
 describe('WP8 public inquiry bridge', () => {
   let app;
   let adminRepository;
@@ -641,8 +679,8 @@ describe('WP8 public inquiry bridge', () => {
     expect(repository.leads).toHaveLength(2);
   });
 
-  it('creates only one lead for concurrent submits with the same key', async () => {
-    const beforeLeads = adminRepository.leads.length;
+  it('creates only one visible lead for concurrent submits with the same key', async () => {
+    const beforeLeads = adminRepository.leads.filter((row) => !row.deleted_at).length;
     const payload = validInquiry({ submission_key: 'public-concurrent-0001' });
 
     const responses = await Promise.all([
@@ -651,7 +689,8 @@ describe('WP8 public inquiry bridge', () => {
     ]);
 
     expect(responses.map((response) => response.status).sort()).toEqual([200, 201]);
-    expect(adminRepository.leads.length - beforeLeads).toBe(1);
+    const visibleLeads = adminRepository.leads.filter((row) => !row.deleted_at).length;
+    expect(visibleLeads - beforeLeads).toBe(1);
     const inquiry = adminRepository.websiteInquiries.find(
       (row) => row.submission_key === 'public-concurrent-0001',
     );
@@ -684,6 +723,48 @@ describe('WP8 public inquiry bridge', () => {
       .post('/api/public/inquiries')
       .send(validInquiry({ submission_key: 'public-throttle-0001' }))
       .expect(200);
+  });
+
+  it('does not let forged forwarded headers bypass the submission throttle', async () => {
+    for (let index = 1; index <= 10; index += 1) {
+      await request(app)
+        .post('/api/public/inquiries')
+        .set('X-Forwarded-For', `203.0.113.${index}`)
+        .send(
+          validInquiry({
+            submission_key: `public-forged-${String(index).padStart(4, '0')}`,
+          }),
+        )
+        .expect(201);
+    }
+
+    await request(app)
+      .post('/api/public/inquiries')
+      .set('X-Forwarded-For', '203.0.113.250')
+      .send(validInquiry({ submission_key: 'public-forged-0011' }))
+      .expect(429);
+  });
+
+  it('logs a lead attachment failure without losing the inquiry', async () => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    adminRepository.createLead = async () => {
+      throw new Error('lead store unavailable');
+    };
+
+    await request(app)
+      .post('/api/public/inquiries')
+      .send(validInquiry({ submission_key: 'public-log-0001' }))
+      .expect(201);
+
+    const inquiry = adminRepository.websiteInquiries.find(
+      (row) => row.submission_key === 'public-log-0001',
+    );
+    expect(inquiry).toBeTruthy();
+    expect(inquiry.lead_id).toBeNull();
+    expect(errorSpy).toHaveBeenCalledWith(
+      expect.stringContaining(inquiry.id),
+      'lead store unavailable',
+    );
   });
 
   it('requires inquiries.view and keeps the inbox company-scoped', async () => {

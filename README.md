@@ -54,6 +54,8 @@ PORT=5000
 SUPABASE_URL=https://your-project.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=your-supabase-service-role-key
 SUPABASE_ANON_KEY=your-supabase-anon-key
+# Express trust proxy: defaults to 1 on Vercel, false elsewhere.
+# TRUST_PROXY=1
 ```
 
 ### Available Scripts
@@ -92,7 +94,7 @@ EstateVista runs as an Express API locally and as a unified Vercel Serverless Fu
 ## 🧪 Testing & Verification
 
 The project includes thorough unit, component, and integration tests:
-- **59 / 59 Vitest tests passing** covering repository logic, property selectors, search query serialization, accessibility, and form validation.
+- **108 client tests** across 18 files and **175 server tests** across 18 files passing.
 - **Zero ESLint warnings or errors**.
 - Automated live database verification script (`npm run test:crud`).
 
